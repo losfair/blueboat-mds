@@ -9,5 +9,3 @@ Blueboat Metadata Service is a distributed metadata manager for [Blueboat](https
 ## Deployment
 
 ![page-1](res/blueboat-mds-Page-1.svg)
-
-![page-2](res/blueboat-mds-Page-2.svg)
