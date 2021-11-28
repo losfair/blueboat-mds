@@ -7,6 +7,8 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"sync/atomic"
+	"time"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -32,6 +34,9 @@ type Mds struct {
 	clustersDir       directory.DirectorySubspace
 	storesDir         directory.DirectorySubspace
 	usersDir          directory.DirectorySubspace
+	region            string
+	tempDir           string
+	clusters          atomic.Value // map[string]*MdsCluster
 }
 
 type mdsReadTransactor struct {
@@ -48,9 +53,18 @@ func (t mdsReadTransactor) ReadTransact(cb func(fdb.ReadTransaction) (interface{
 }
 
 func NewMds(logger *zap.Logger) *Mds {
-	return &Mds{
-		logger: logger,
+	tempDir, err := os.MkdirTemp("", "blueboat-mds-")
+	if err != nil {
+		logger.Panic("failed to create temp dir", zap.Error(err))
 	}
+	logger.Info("created temp dir", zap.String("dir", tempDir))
+
+	m := &Mds{
+		logger:  logger,
+		tempDir: tempDir,
+	}
+	m.clusters.Store(make(map[string]*MdsCluster))
+	return m
 }
 
 func (m *Mds) PrimaryTransactor() fdb.Transactor {
@@ -85,6 +99,12 @@ func (m *Mds) Run() error {
 	if err := yaml.Unmarshal(configData, &config); err != nil {
 		return errors.Wrap(err, "failed to parse config file")
 	}
+
+	if config.Region == "" {
+		return errors.New("region is required")
+	}
+
+	m.region = config.Region
 
 	if config.RootStore.Primary == "" {
 		return errors.New("primary root store must be specified")
@@ -122,10 +142,84 @@ func (m *Mds) Run() error {
 		return errors.Wrap(err, "failed to create or open users directory")
 	}
 
-	m.logger.Info("starting ws listener")
+	m.logger.Info("opening clusters")
+	if err := m.openClustersOnce(); err != nil {
+		return errors.Wrap(err, "failed to open clusters")
+	}
 
+	m.logger.Info("spawning periodic cluster reloader")
+	go m.periodicallyReloadClusters()
+
+	m.logger.Info("starting ws listener")
 	http.HandleFunc("/mds", m.handle)
 	return errors.Wrap(http.ListenAndServe(*listen, nil), "failed to start http server")
+}
+
+func (m *Mds) periodicallyReloadClusters() {
+	for {
+		time.Sleep(30 * time.Second)
+		if err := m.openClustersOnce(); err != nil {
+			m.logger.Error("failed to reload clusters", zap.Error(err))
+		}
+	}
+}
+
+func (m *Mds) lookupCluster(name string) (*MdsCluster, error) {
+	clusters := m.clusters.Load().(map[string]*MdsCluster)
+	c, ok := clusters[name]
+	if !ok {
+		return nil, errors.Errorf("cluster %s not found", name)
+	}
+	return c, nil
+}
+
+func (m *Mds) openClustersOnce() error {
+	oldClusters := m.clusters.Load().(map[string]*MdsCluster)
+	clusters := make(map[string]*MdsCluster)
+
+	ifc, err := m.ReplicaReadTransactor().ReadTransact(func(txn fdb.ReadTransaction) (interface{}, error) {
+		return txn.GetRange(m.clustersDir, fdb.RangeOptions{}).GetSliceWithError()
+	})
+	if err != nil {
+		return err
+	}
+	kv := ifc.([]fdb.KeyValue)
+	for _, pair := range kv {
+		tuple, err := m.clustersDir.Unpack(pair.Key)
+		if err != nil {
+			m.logger.Error("failed to unpack cluster key", zap.Error(err))
+			continue
+		}
+		if len(tuple) < 1 {
+			m.logger.Error("cluster key is an empty tuple", zap.Binary("key", pair.Key))
+			continue
+		}
+		clusterName, ok := tuple[0].(string)
+		if !ok {
+			m.logger.Error("cluster key is not a string", zap.Binary("key", pair.Key))
+			continue
+		}
+		if old, ok := oldClusters[clusterName]; ok {
+			clusters[clusterName] = old
+			continue
+		}
+
+		var clusterConfig protocol.Cluster
+		if err := protojson.Unmarshal(pair.Value, &clusterConfig); err != nil {
+			m.logger.Error("failed to unmarshal cluster config", zap.Error(err))
+			continue
+		}
+		cluster, err := NewMdsCluster(m.logger, m.tempDir, clusterName, m.region, &clusterConfig)
+		if err != nil {
+			m.logger.Error("failed to create MdsCluster", zap.String("name", clusterName), zap.Error(err))
+			continue
+		}
+		clusters[clusterName] = cluster
+		m.logger.Info("opened cluster", zap.String("name", clusterName))
+	}
+
+	m.clusters.Store(clusters)
+	return nil
 }
 
 func (m *Mds) readRoleListFromReplica(key fdb.KeyConvertible) (*protocol.RoleList, error) {
@@ -168,6 +262,7 @@ func (m *Mds) checkStorePermission(publicKey []byte, store directory.DirectorySu
 
 func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	logger := m.logger.With(zap.String("remote", r.RemoteAddr))
+	logger.Info("new connection")
 
 	c, err := wsUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -247,27 +342,15 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		logger.Error("no cluster name")
 		return
 	}
-	clusterConfigBytes, err := m.readBytesValueFromReplica(m.clustersDir.Pack([]tuple.TupleElement{string(clusterNameBytes)}))
+
+	clusterName := string(clusterNameBytes)
+	cluster, err := m.lookupCluster(clusterName)
 	if err != nil {
-		logger.Error("failed to read cluster config", zap.Error(err))
-		return
-	}
-	if clusterConfigBytes == nil {
-		logger.Error("no cluster config")
-		return
-	}
-	var clusterConfig protocol.Cluster
-	if err := protojson.Unmarshal(clusterConfigBytes, &clusterConfig); err != nil {
-		logger.Error("failed to unmarshal cluster config", zap.Error(err))
+		logger.Error("failed to lookup cluster", zap.Error(err))
 		return
 	}
 
-	session, err := NewMdsSession(logger, &clusterConfig)
-	if err != nil {
-		logger.Error("failed to create session", zap.Error(err))
-		return
-	}
-
+	session := NewMdsSession(logger, cluster)
 	err = session.Run(c)
 	if err != nil {
 		logger.Error("session failed", zap.Error(err))
