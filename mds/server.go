@@ -7,6 +7,7 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -290,6 +291,11 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if loginMsg.MuxWidth == 0 || loginMsg.MuxWidth > 16 {
+		logger.Error("invalid mux width", zap.Uint32("width", loginMsg.MuxWidth))
+		return
+	}
+
 	if len(loginMsg.PublicKey) != ed25519.PublicKeySize {
 		logger.Error("invalid public key size", zap.Int("size", len(loginMsg.PublicKey)))
 		return
@@ -350,10 +356,41 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session := NewMdsSession(logger, cluster)
-	err = session.Run(c)
-	if err != nil {
-		logger.Error("session failed", zap.Error(err))
+	channels := make([]chan *protocol.Request, 0, int(loginMsg.MuxWidth))
+	for i := uint32(0); i < loginMsg.MuxWidth; i++ {
+		channels = append(channels, make(chan *protocol.Request, 64))
+	}
+	defer func() {
+		for _, ch := range channels {
+			close(ch)
+		}
+	}()
+
+	var xmitMu sync.Mutex
+
+	for i := 0; i < int(loginMsg.MuxWidth); i++ {
+		session := NewMdsSession(logger.With(zap.Int("lane", i)), cluster)
+		go session.Run(channels[i], func(m proto.Message) error {
+			xmitMu.Lock()
+			defer xmitMu.Unlock()
+			return writeProtoMsg(c, m)
+		})
+	}
+
+	for {
+		var msg protocol.Request
+		if err := readProtoMsg(c, &msg); err != nil {
+			logger.Error("failed to read request", zap.Error(err))
+			return
+		}
+
+		lane := int(msg.Lane)
+		if lane < 0 || lane >= len(channels) {
+			logger.Error("invalid lane", zap.Int("lane", lane))
+			continue
+		}
+
+		channels[lane] <- &msg
 	}
 }
 

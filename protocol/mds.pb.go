@@ -75,6 +75,7 @@ type Login struct {
 	Store     string `protobuf:"bytes,1,opt,name=store,proto3" json:"store,omitempty"`
 	PublicKey []byte `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	Signature []byte `protobuf:"bytes,3,opt,name=signature,proto3" json:"signature,omitempty"`
+	MuxWidth  uint32 `protobuf:"varint,4,opt,name=mux_width,json=muxWidth,proto3" json:"mux_width,omitempty"`
 }
 
 func (x *Login) Reset() {
@@ -130,6 +131,13 @@ func (x *Login) GetSignature() []byte {
 	return nil
 }
 
+func (x *Login) GetMuxWidth() uint32 {
+	if x != nil {
+		return x.MuxWidth
+	}
+	return 0
+}
+
 type LoginResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -177,6 +185,635 @@ func (x *LoginResponse) GetOk() bool {
 	return false
 }
 
+type Request struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Lane uint32 `protobuf:"varint,1,opt,name=lane,proto3" json:"lane,omitempty"`
+	// Types that are assignable to Body:
+	//	*Request_Readonly
+	//	*Request_Writable
+	Body isRequest_Body `protobuf_oneof:"body"`
+}
+
+func (x *Request) Reset() {
+	*x = Request{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Request) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Request) ProtoMessage() {}
+
+func (x *Request) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Request.ProtoReflect.Descriptor instead.
+func (*Request) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Request) GetLane() uint32 {
+	if x != nil {
+		return x.Lane
+	}
+	return 0
+}
+
+func (m *Request) GetBody() isRequest_Body {
+	if m != nil {
+		return m.Body
+	}
+	return nil
+}
+
+func (x *Request) GetReadonly() *ReadonlyRequest {
+	if x, ok := x.GetBody().(*Request_Readonly); ok {
+		return x.Readonly
+	}
+	return nil
+}
+
+func (x *Request) GetWritable() *WritableRequest {
+	if x, ok := x.GetBody().(*Request_Writable); ok {
+		return x.Writable
+	}
+	return nil
+}
+
+type isRequest_Body interface {
+	isRequest_Body()
+}
+
+type Request_Readonly struct {
+	Readonly *ReadonlyRequest `protobuf:"bytes,2,opt,name=readonly,proto3,oneof"`
+}
+
+type Request_Writable struct {
+	Writable *WritableRequest `protobuf:"bytes,3,opt,name=writable,proto3,oneof"`
+}
+
+func (*Request_Readonly) isRequest_Body() {}
+
+func (*Request_Writable) isRequest_Body() {}
+
+type ReadonlyRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ReplicaRead bool `protobuf:"varint,1,opt,name=replica_read,json=replicaRead,proto3" json:"replica_read,omitempty"`
+	// Types that are assignable to Body:
+	//	*ReadonlyRequest_Get
+	//	*ReadonlyRequest_BeginTransaction
+	//	*ReadonlyRequest_AbortTransaction
+	Body isReadonlyRequest_Body `protobuf_oneof:"body"`
+}
+
+func (x *ReadonlyRequest) Reset() {
+	*x = ReadonlyRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ReadonlyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReadonlyRequest) ProtoMessage() {}
+
+func (x *ReadonlyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReadonlyRequest.ProtoReflect.Descriptor instead.
+func (*ReadonlyRequest) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ReadonlyRequest) GetReplicaRead() bool {
+	if x != nil {
+		return x.ReplicaRead
+	}
+	return false
+}
+
+func (m *ReadonlyRequest) GetBody() isReadonlyRequest_Body {
+	if m != nil {
+		return m.Body
+	}
+	return nil
+}
+
+func (x *ReadonlyRequest) GetGet() *GetRequest {
+	if x, ok := x.GetBody().(*ReadonlyRequest_Get); ok {
+		return x.Get
+	}
+	return nil
+}
+
+func (x *ReadonlyRequest) GetBeginTransaction() *TransactionBeginRequest {
+	if x, ok := x.GetBody().(*ReadonlyRequest_BeginTransaction); ok {
+		return x.BeginTransaction
+	}
+	return nil
+}
+
+func (x *ReadonlyRequest) GetAbortTransaction() *TransactionAbortRequest {
+	if x, ok := x.GetBody().(*ReadonlyRequest_AbortTransaction); ok {
+		return x.AbortTransaction
+	}
+	return nil
+}
+
+type isReadonlyRequest_Body interface {
+	isReadonlyRequest_Body()
+}
+
+type ReadonlyRequest_Get struct {
+	Get *GetRequest `protobuf:"bytes,2,opt,name=get,proto3,oneof"`
+}
+
+type ReadonlyRequest_BeginTransaction struct {
+	BeginTransaction *TransactionBeginRequest `protobuf:"bytes,3,opt,name=begin_transaction,json=beginTransaction,proto3,oneof"`
+}
+
+type ReadonlyRequest_AbortTransaction struct {
+	AbortTransaction *TransactionAbortRequest `protobuf:"bytes,4,opt,name=abort_transaction,json=abortTransaction,proto3,oneof"`
+}
+
+func (*ReadonlyRequest_Get) isReadonlyRequest_Body() {}
+
+func (*ReadonlyRequest_BeginTransaction) isReadonlyRequest_Body() {}
+
+func (*ReadonlyRequest_AbortTransaction) isReadonlyRequest_Body() {}
+
+type WritableRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Put               *PutRequest               `protobuf:"bytes,1,opt,name=put,proto3" json:"put,omitempty"`
+	Delete            *DeleteRequest            `protobuf:"bytes,2,opt,name=delete,proto3" json:"delete,omitempty"`
+	CommitTransaction *TransactionCommitRequest `protobuf:"bytes,3,opt,name=commit_transaction,json=commitTransaction,proto3" json:"commit_transaction,omitempty"`
+}
+
+func (x *WritableRequest) Reset() {
+	*x = WritableRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *WritableRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WritableRequest) ProtoMessage() {}
+
+func (x *WritableRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WritableRequest.ProtoReflect.Descriptor instead.
+func (*WritableRequest) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *WritableRequest) GetPut() *PutRequest {
+	if x != nil {
+		return x.Put
+	}
+	return nil
+}
+
+func (x *WritableRequest) GetDelete() *DeleteRequest {
+	if x != nil {
+		return x.Delete
+	}
+	return nil
+}
+
+func (x *WritableRequest) GetCommitTransaction() *TransactionCommitRequest {
+	if x != nil {
+		return x.CommitTransaction
+	}
+	return nil
+}
+
+type GetRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+}
+
+func (x *GetRequest) Reset() {
+	*x = GetRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRequest) ProtoMessage() {}
+
+func (x *GetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRequest.ProtoReflect.Descriptor instead.
+func (*GetRequest) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type PutRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Path  string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+}
+
+func (x *PutRequest) Reset() {
+	*x = PutRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PutRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutRequest) ProtoMessage() {}
+
+func (x *PutRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PutRequest.ProtoReflect.Descriptor instead.
+func (*PutRequest) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *PutRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *PutRequest) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
+type DeleteRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+}
+
+func (x *DeleteRequest) Reset() {
+	*x = DeleteRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeleteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteRequest) ProtoMessage() {}
+
+func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
+func (*DeleteRequest) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *DeleteRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+type TransactionBeginRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *TransactionBeginRequest) Reset() {
+	*x = TransactionBeginRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *TransactionBeginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransactionBeginRequest) ProtoMessage() {}
+
+func (x *TransactionBeginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransactionBeginRequest.ProtoReflect.Descriptor instead.
+func (*TransactionBeginRequest) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{9}
+}
+
+type TransactionCommitRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *TransactionCommitRequest) Reset() {
+	*x = TransactionCommitRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *TransactionCommitRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransactionCommitRequest) ProtoMessage() {}
+
+func (x *TransactionCommitRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransactionCommitRequest.ProtoReflect.Descriptor instead.
+func (*TransactionCommitRequest) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{10}
+}
+
+type TransactionAbortRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *TransactionAbortRequest) Reset() {
+	*x = TransactionAbortRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *TransactionAbortRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransactionAbortRequest) ProtoMessage() {}
+
+func (x *TransactionAbortRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransactionAbortRequest.ProtoReflect.Descriptor instead.
+func (*TransactionAbortRequest) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{11}
+}
+
+type Response struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Types that are assignable to Body:
+	//	*Response_Error
+	Body isResponse_Body `protobuf_oneof:"body"`
+}
+
+func (x *Response) Reset() {
+	*x = Response{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[12]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Response) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Response) ProtoMessage() {}
+
+func (x *Response) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[12]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Response.ProtoReflect.Descriptor instead.
+func (*Response) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{12}
+}
+
+func (m *Response) GetBody() isResponse_Body {
+	if m != nil {
+		return m.Body
+	}
+	return nil
+}
+
+func (x *Response) GetError() *ErrorResponse {
+	if x, ok := x.GetBody().(*Response_Error); ok {
+		return x.Error
+	}
+	return nil
+}
+
+type isResponse_Body interface {
+	isResponse_Body()
+}
+
+type Response_Error struct {
+	Error *ErrorResponse `protobuf:"bytes,1,opt,name=error,proto3,oneof"`
+}
+
+func (*Response_Error) isResponse_Body() {}
+
+type ErrorResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Description string `protobuf:"bytes,1,opt,name=description,proto3" json:"description,omitempty"`
+}
+
+func (x *ErrorResponse) Reset() {
+	*x = ErrorResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[13]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ErrorResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ErrorResponse) ProtoMessage() {}
+
+func (x *ErrorResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[13]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ErrorResponse.ProtoReflect.Descriptor instead.
+func (*ErrorResponse) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ErrorResponse) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
 type Cluster struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -190,7 +827,7 @@ type Cluster struct {
 func (x *Cluster) Reset() {
 	*x = Cluster{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_mds_proto_msgTypes[3]
+		mi := &file_mds_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -203,7 +840,7 @@ func (x *Cluster) String() string {
 func (*Cluster) ProtoMessage() {}
 
 func (x *Cluster) ProtoReflect() protoreflect.Message {
-	mi := &file_mds_proto_msgTypes[3]
+	mi := &file_mds_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -216,7 +853,7 @@ func (x *Cluster) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Cluster.ProtoReflect.Descriptor instead.
 func (*Cluster) Descriptor() ([]byte, []int) {
-	return file_mds_proto_rawDescGZIP(), []int{3}
+	return file_mds_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Cluster) GetPrimary() *ClusterRegion {
@@ -252,7 +889,7 @@ type ClusterRegion struct {
 func (x *ClusterRegion) Reset() {
 	*x = ClusterRegion{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_mds_proto_msgTypes[4]
+		mi := &file_mds_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -265,7 +902,7 @@ func (x *ClusterRegion) String() string {
 func (*ClusterRegion) ProtoMessage() {}
 
 func (x *ClusterRegion) ProtoReflect() protoreflect.Message {
-	mi := &file_mds_proto_msgTypes[4]
+	mi := &file_mds_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -278,7 +915,7 @@ func (x *ClusterRegion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterRegion.ProtoReflect.Descriptor instead.
 func (*ClusterRegion) Descriptor() ([]byte, []int) {
-	return file_mds_proto_rawDescGZIP(), []int{4}
+	return file_mds_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ClusterRegion) GetRegion() string {
@@ -306,7 +943,7 @@ type RoleList struct {
 func (x *RoleList) Reset() {
 	*x = RoleList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_mds_proto_msgTypes[5]
+		mi := &file_mds_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -319,7 +956,7 @@ func (x *RoleList) String() string {
 func (*RoleList) ProtoMessage() {}
 
 func (x *RoleList) ProtoReflect() protoreflect.Message {
-	mi := &file_mds_proto_msgTypes[5]
+	mi := &file_mds_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -332,7 +969,7 @@ func (x *RoleList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoleList.ProtoReflect.Descriptor instead.
 func (*RoleList) Descriptor() ([]byte, []int) {
-	return file_mds_proto_rawDescGZIP(), []int{5}
+	return file_mds_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RoleList) GetRoles() []string {
@@ -349,14 +986,72 @@ var file_mds_proto_rawDesc = []byte{
 	0x22, 0x2e, 0x0a, 0x0e, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x43, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e,
 	0x67, 0x65, 0x12, 0x1c, 0x0a, 0x09, 0x63, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x09, 0x63, 0x68, 0x61, 0x6c, 0x6c, 0x65, 0x6e, 0x67, 0x65,
-	0x22, 0x5a, 0x0a, 0x05, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x74, 0x6f,
+	0x22, 0x77, 0x0a, 0x05, 0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x74, 0x6f,
 	0x72, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x12,
 	0x1d, 0x0a, 0x0a, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x02, 0x20,
 	0x01, 0x28, 0x0c, 0x52, 0x09, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79, 0x12, 0x1c,
 	0x0a, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28,
-	0x0c, 0x52, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x22, 0x1f, 0x0a, 0x0d,
-	0x4c, 0x6f, 0x67, 0x69, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e, 0x0a,
-	0x02, 0x6f, 0x6b, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x6b, 0x22, 0x83, 0x01,
+	0x0c, 0x52, 0x09, 0x73, 0x69, 0x67, 0x6e, 0x61, 0x74, 0x75, 0x72, 0x65, 0x12, 0x1b, 0x0a, 0x09,
+	0x6d, 0x75, 0x78, 0x5f, 0x77, 0x69, 0x64, 0x74, 0x68, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0d, 0x52,
+	0x08, 0x6d, 0x75, 0x78, 0x57, 0x69, 0x64, 0x74, 0x68, 0x22, 0x1f, 0x0a, 0x0d, 0x4c, 0x6f, 0x67,
+	0x69, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x6f, 0x6b,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x02, 0x6f, 0x6b, 0x22, 0x8d, 0x01, 0x0a, 0x07, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6c, 0x61, 0x6e, 0x65, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x6c, 0x61, 0x6e, 0x65, 0x12, 0x32, 0x0a, 0x08, 0x72, 0x65,
+	0x61, 0x64, 0x6f, 0x6e, 0x6c, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e, 0x6d,
+	0x64, 0x73, 0x2e, 0x52, 0x65, 0x61, 0x64, 0x6f, 0x6e, 0x6c, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x48, 0x00, 0x52, 0x08, 0x72, 0x65, 0x61, 0x64, 0x6f, 0x6e, 0x6c, 0x79, 0x12, 0x32,
+	0x0a, 0x08, 0x77, 0x72, 0x69, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x14, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x57, 0x72, 0x69, 0x74, 0x61, 0x62, 0x6c, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x08, 0x77, 0x72, 0x69, 0x74, 0x61, 0x62,
+	0x6c, 0x65, 0x42, 0x06, 0x0a, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x22, 0xfb, 0x01, 0x0a, 0x0f, 0x52,
+	0x65, 0x61, 0x64, 0x6f, 0x6e, 0x6c, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x21,
+	0x0a, 0x0c, 0x72, 0x65, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x5f, 0x72, 0x65, 0x61, 0x64, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x08, 0x52, 0x0b, 0x72, 0x65, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x52, 0x65, 0x61,
+	0x64, 0x12, 0x23, 0x0a, 0x03, 0x67, 0x65, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0f,
+	0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x47, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48,
+	0x00, 0x52, 0x03, 0x67, 0x65, 0x74, 0x12, 0x4b, 0x0a, 0x11, 0x62, 0x65, 0x67, 0x69, 0x6e, 0x5f,
+	0x74, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x1c, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74,
+	0x69, 0x6f, 0x6e, 0x42, 0x65, 0x67, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48,
+	0x00, 0x52, 0x10, 0x62, 0x65, 0x67, 0x69, 0x6e, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74,
+	0x69, 0x6f, 0x6e, 0x12, 0x4b, 0x0a, 0x11, 0x61, 0x62, 0x6f, 0x72, 0x74, 0x5f, 0x74, 0x72, 0x61,
+	0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c,
+	0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e,
+	0x41, 0x62, 0x6f, 0x72, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x48, 0x00, 0x52, 0x10,
+	0x61, 0x62, 0x6f, 0x72, 0x74, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e,
+	0x42, 0x06, 0x0a, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x22, 0xae, 0x01, 0x0a, 0x0f, 0x57, 0x72, 0x69,
+	0x74, 0x61, 0x62, 0x6c, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x21, 0x0a, 0x03,
+	0x70, 0x75, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x6d, 0x64, 0x73, 0x2e,
+	0x50, 0x75, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x03, 0x70, 0x75, 0x74, 0x12,
+	0x2a, 0x0a, 0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x12, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x52, 0x06, 0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x12, 0x4c, 0x0a, 0x12, 0x63,
+	0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x5f, 0x74, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f,
+	0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1d, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x54, 0x72,
+	0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x11, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x54, 0x72,
+	0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x20, 0x0a, 0x0a, 0x47, 0x65, 0x74,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x22, 0x36, 0x0a, 0x0a, 0x50,
+	0x75, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74,
+	0x68, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x12, 0x14, 0x0a,
+	0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61,
+	0x6c, 0x75, 0x65, 0x22, 0x23, 0x0a, 0x0d, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x22, 0x19, 0x0a, 0x17, 0x54, 0x72, 0x61, 0x6e,
+	0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x42, 0x65, 0x67, 0x69, 0x6e, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x22, 0x1a, 0x0a, 0x18, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69,
+	0x6f, 0x6e, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22,
+	0x19, 0x0a, 0x17, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x41, 0x62,
+	0x6f, 0x72, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x3e, 0x0a, 0x08, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x2a, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x45, 0x72, 0x72, 0x6f,
+	0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00, 0x52, 0x05, 0x65, 0x72, 0x72,
+	0x6f, 0x72, 0x42, 0x06, 0x0a, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x22, 0x31, 0x0a, 0x0d, 0x45, 0x72,
+	0x72, 0x6f, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x20, 0x0a, 0x0b, 0x64,
+	0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x83, 0x01,
 	0x0a, 0x07, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x12, 0x2c, 0x0a, 0x07, 0x70, 0x72, 0x69,
 	0x6d, 0x61, 0x72, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x6d, 0x64, 0x73,
 	0x2e, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x52, 0x65, 0x67, 0x69, 0x6f, 0x6e, 0x52, 0x07,
@@ -387,23 +1082,43 @@ func file_mds_proto_rawDescGZIP() []byte {
 	return file_mds_proto_rawDescData
 }
 
-var file_mds_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_mds_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_mds_proto_goTypes = []interface{}{
-	(*LoginChallenge)(nil), // 0: mds.LoginChallenge
-	(*Login)(nil),          // 1: mds.Login
-	(*LoginResponse)(nil),  // 2: mds.LoginResponse
-	(*Cluster)(nil),        // 3: mds.Cluster
-	(*ClusterRegion)(nil),  // 4: mds.ClusterRegion
-	(*RoleList)(nil),       // 5: mds.RoleList
+	(*LoginChallenge)(nil),           // 0: mds.LoginChallenge
+	(*Login)(nil),                    // 1: mds.Login
+	(*LoginResponse)(nil),            // 2: mds.LoginResponse
+	(*Request)(nil),                  // 3: mds.Request
+	(*ReadonlyRequest)(nil),          // 4: mds.ReadonlyRequest
+	(*WritableRequest)(nil),          // 5: mds.WritableRequest
+	(*GetRequest)(nil),               // 6: mds.GetRequest
+	(*PutRequest)(nil),               // 7: mds.PutRequest
+	(*DeleteRequest)(nil),            // 8: mds.DeleteRequest
+	(*TransactionBeginRequest)(nil),  // 9: mds.TransactionBeginRequest
+	(*TransactionCommitRequest)(nil), // 10: mds.TransactionCommitRequest
+	(*TransactionAbortRequest)(nil),  // 11: mds.TransactionAbortRequest
+	(*Response)(nil),                 // 12: mds.Response
+	(*ErrorResponse)(nil),            // 13: mds.ErrorResponse
+	(*Cluster)(nil),                  // 14: mds.Cluster
+	(*ClusterRegion)(nil),            // 15: mds.ClusterRegion
+	(*RoleList)(nil),                 // 16: mds.RoleList
 }
 var file_mds_proto_depIdxs = []int32{
-	4, // 0: mds.Cluster.primary:type_name -> mds.ClusterRegion
-	4, // 1: mds.Cluster.replicas:type_name -> mds.ClusterRegion
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4,  // 0: mds.Request.readonly:type_name -> mds.ReadonlyRequest
+	5,  // 1: mds.Request.writable:type_name -> mds.WritableRequest
+	6,  // 2: mds.ReadonlyRequest.get:type_name -> mds.GetRequest
+	9,  // 3: mds.ReadonlyRequest.begin_transaction:type_name -> mds.TransactionBeginRequest
+	11, // 4: mds.ReadonlyRequest.abort_transaction:type_name -> mds.TransactionAbortRequest
+	7,  // 5: mds.WritableRequest.put:type_name -> mds.PutRequest
+	8,  // 6: mds.WritableRequest.delete:type_name -> mds.DeleteRequest
+	10, // 7: mds.WritableRequest.commit_transaction:type_name -> mds.TransactionCommitRequest
+	13, // 8: mds.Response.error:type_name -> mds.ErrorResponse
+	15, // 9: mds.Cluster.primary:type_name -> mds.ClusterRegion
+	15, // 10: mds.Cluster.replicas:type_name -> mds.ClusterRegion
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_mds_proto_init() }
@@ -449,7 +1164,7 @@ func file_mds_proto_init() {
 			}
 		}
 		file_mds_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Cluster); i {
+			switch v := v.(*Request); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -461,7 +1176,7 @@ func file_mds_proto_init() {
 			}
 		}
 		file_mds_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ClusterRegion); i {
+			switch v := v.(*ReadonlyRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -473,6 +1188,138 @@ func file_mds_proto_init() {
 			}
 		}
 		file_mds_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*WritableRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PutRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DeleteRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*TransactionBeginRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*TransactionCommitRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*TransactionAbortRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Response); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ErrorResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Cluster); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ClusterRegion); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RoleList); i {
 			case 0:
 				return &v.state
@@ -485,13 +1332,25 @@ func file_mds_proto_init() {
 			}
 		}
 	}
+	file_mds_proto_msgTypes[3].OneofWrappers = []interface{}{
+		(*Request_Readonly)(nil),
+		(*Request_Writable)(nil),
+	}
+	file_mds_proto_msgTypes[4].OneofWrappers = []interface{}{
+		(*ReadonlyRequest_Get)(nil),
+		(*ReadonlyRequest_BeginTransaction)(nil),
+		(*ReadonlyRequest_AbortTransaction)(nil),
+	}
+	file_mds_proto_msgTypes[12].OneofWrappers = []interface{}{
+		(*Response_Error)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_mds_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

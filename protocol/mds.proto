@@ -10,10 +10,69 @@ message Login {
   string store = 1;
   bytes public_key = 2;
   bytes signature = 3;
+  uint32 mux_width = 4;
 }
 
 message LoginResponse {
   bool ok = 1;
+}
+
+message Request {
+  uint32 lane = 1;
+  oneof body {
+    ReadonlyRequest readonly = 2;
+    WritableRequest writable = 3;
+  }
+}
+
+message ReadonlyRequest {
+  bool replica_read = 1;
+  oneof body {
+    GetRequest get = 2;
+    TransactionBeginRequest begin_transaction = 3;
+    TransactionAbortRequest abort_transaction = 4;
+  }
+}
+
+message WritableRequest {
+  PutRequest put = 1;
+  DeleteRequest delete = 2;
+  TransactionCommitRequest commit_transaction = 3;
+}
+
+message GetRequest {
+  string path = 1;
+}
+
+message PutRequest {
+  string path = 1;
+  string value = 2;
+}
+
+message DeleteRequest {
+  string path = 1;
+}
+
+message TransactionBeginRequest {
+
+}
+
+message TransactionCommitRequest {
+
+}
+
+message TransactionAbortRequest {
+
+}
+
+message Response {
+  oneof body {
+    ErrorResponse error = 1;
+  }
+}
+
+message ErrorResponse {
+  string description = 1;
 }
 
 message Cluster {
