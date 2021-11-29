@@ -23,9 +23,10 @@ message Request {
 }
 
 message Response {
+  uint32 lane = 1;
   oneof body {
-    ErrorResponse error = 1;
-    string output = 2;
+    ErrorResponse error = 2;
+    string output = 3;
   }
 }
 

@@ -375,7 +375,11 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	for {
 		var msg protocol.Request
 		if err := readProtoMsg(c, &msg); err != nil {
-			logger.Error("failed to read request", zap.Error(err))
+			if _, ok := err.(*websocket.CloseError); ok {
+				logger.Info("connection closed")
+			} else {
+				logger.Error("failed to read request", zap.Error(err))
+			}
 			return
 		}
 

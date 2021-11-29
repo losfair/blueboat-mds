@@ -165,6 +165,7 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, xmit func(proto.Messa
 		if err != nil {
 			s.logger.Error("failed to run program", zap.Error(err))
 			err = xmit(&protocol.Response{
+				Lane: req.Lane,
 				Body: &protocol.Response_Error{
 					Error: &protocol.ErrorResponse{
 						Description: err.Error(),
@@ -177,6 +178,7 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, xmit func(proto.Messa
 			if err != nil {
 				s.logger.Error("failed to marshal output", zap.Error(err))
 				err = xmit(&protocol.Response{
+					Lane: req.Lane,
 					Body: &protocol.Response_Error{
 						Error: &protocol.ErrorResponse{
 							Description: err.Error(),
@@ -185,6 +187,7 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, xmit func(proto.Messa
 				})
 			} else {
 				err = xmit(&protocol.Response{
+					Lane: req.Lane,
 					Body: &protocol.Response_Output{
 						Output: string(output),
 					},
