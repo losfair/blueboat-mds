@@ -77,8 +77,8 @@ func (m *Mds) ReplicaReadTransactor() fdb.ReadTransactor {
 }
 
 func (m *Mds) Run() error {
-	listen := flag.String("listen", "", "listen address")
-	configPath := flag.String("config", "", "config file")
+	listen := flag.String("l", "", "listen address")
+	configPath := flag.String("c", "", "config file")
 	backdoorPublicKey := flag.String("backdoor-public-key", "", "backdoor public key")
 	flag.Parse()
 
@@ -297,7 +297,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !ed25519.Verify(loginMsg.PublicKey, loginChallenge.Challenge, loginMsg.Signature) {
-		logger.Error("invalid signature")
+		logger.Error("invalid signature", zap.Binary("publicKey", loginMsg.PublicKey), zap.Binary("signature", loginMsg.Signature), zap.Binary("challenge", loginChallenge.Challenge))
 		return
 	}
 
@@ -332,13 +332,14 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	logger = logger.With(zap.String("store", loginMsg.Store), zap.String("user", publicKeyB64))
 
 	var storeInfo protocol.StoreInfo
-	ok, err := m.readProtojsonFromReplica(store.Pack([]tuple.TupleElement{"info"}), &storeInfo)
+	storeInfoKey := store.Pack([]tuple.TupleElement{"info"})
+	ok, err := m.readProtojsonFromReplica(storeInfoKey, &storeInfo)
 	if err != nil {
 		logger.Error("failed to read store info", zap.Error(err))
 		return
 	}
 	if !ok {
-		logger.Error("store not found")
+		logger.Error("store not found", zap.Binary("storeInfoKey", storeInfoKey))
 		return
 	}
 

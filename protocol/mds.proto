@@ -41,7 +41,6 @@ message ErrorResponse {
 message Cluster {
   ClusterRegion primary = 1;
   repeated ClusterRegion replicas = 2;
-  string subspace = 3;
 }
 
 message ClusterRegion {
