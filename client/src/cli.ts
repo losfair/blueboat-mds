@@ -23,8 +23,51 @@ async function run() {
   });
   await client.init();
 
-  const res = await client.run("this.output = 42");
-  console.log(res);
+  try {
+    const res = await client.run("throw new Error('xxx');");
+    console.log(res);
+  } catch(e) {
+    console.log(e);
+  }
+
+  try {
+    const res = await client.run("throw new Error('yyy');");
+    console.log(res);
+  } catch(e) {
+    console.log(e);
+  }
+
+  {
+    const res = await client.run("1 + 2");
+    console.log(res);
+  }
+
+  {
+    const res = await client.run("output = 1");
+    console.log(res);
+  }
+
+  {
+    const res = await client.run("3 + 4");
+    console.log(res);
+  }
+
+  {
+    const res = await client.run(`
+    var txn = createPrimaryTransaction();
+    txn.Set("hello", "world");
+    txn.Commit().Wait();
+    `);
+    console.log(res);
+  }
+
+  {
+    const res = await client.run(`
+    var txn = createPrimaryTransaction();
+    output = arrayBufferToString(txn.Get("hello").Wait());
+    `);
+    console.log(res);
+  }
 }
 
 run().then(() => {
