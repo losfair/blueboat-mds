@@ -361,14 +361,19 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	stop := make(chan struct{})
+	defer close(stop)
+
 	var xmitMu sync.Mutex
 
 	for i := 0; i < int(loginMsg.MuxWidth); i++ {
 		session := NewMdsSession(logger.With(zap.Int("lane", i)), cluster, storeSS)
-		go session.Run(channels[i], func(m proto.Message) error {
+		go session.Run(channels[i], stop, func(m proto.Message) error {
 			xmitMu.Lock()
 			defer xmitMu.Unlock()
 			return writeProtoMsg(c, m)
+		}, func() {
+			c.Close()
 		})
 	}
 

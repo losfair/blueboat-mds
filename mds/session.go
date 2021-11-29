@@ -1,6 +1,7 @@
 package mds
 
 import (
+	"encoding/base64"
 	"encoding/json"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
@@ -112,7 +113,12 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 	}
 	s.vm.Set("createPrimaryTransaction", s.createPrimaryTransaction)
 	s.vm.Set("createReplicaTransaction", s.createReplicaTransaction)
+	s.vm.Set("base64Encode", s.jsBase64Encode)
 	return s
+}
+
+func (s *MdsSession) jsBase64Encode(value goja.ArrayBuffer) string {
+	return base64.StdEncoding.EncodeToString(value.Bytes())
 }
 
 func (s *MdsSession) createPrimaryTransaction(call goja.FunctionCall) goja.Value {
@@ -151,7 +157,18 @@ func (s *MdsSession) createReplicaTransaction(call goja.FunctionCall) goja.Value
 	})
 }
 
-func (s *MdsSession) Run(ingress <-chan *protocol.Request, xmit func(proto.Message) error) {
+func (s *MdsSession) Run(ingress <-chan *protocol.Request, stop <-chan struct{}, xmit func(proto.Message) error, kill func()) {
+	defer func() {
+		if err := recover(); err != nil {
+			s.logger.Error("session panic", zap.Any("error", err))
+			kill()
+		}
+	}()
+	go func() {
+		<-stop
+		s.logger.Debug("interrupting vm")
+		s.vm.Interrupt(nil)
+	}()
 	for {
 		req := <-ingress
 		if req == nil {
