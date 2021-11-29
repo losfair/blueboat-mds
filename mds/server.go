@@ -202,6 +202,12 @@ func (m *Mds) openClustersOnce() error {
 		m.logger.Info("opened cluster", zap.String("name", clusterName))
 	}
 
+	for k := range oldClusters {
+		if _, ok := clusters[k]; !ok {
+			m.logger.Info("removed old cluster", zap.String("name", k))
+		}
+	}
+
 	m.clusters.Store(clusters)
 	return nil
 }
