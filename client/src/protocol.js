@@ -889,6 +889,7 @@ $root.mds = (function() {
          * Properties of a Response.
          * @memberof mds
          * @interface IResponse
+         * @property {number|null} [lane] Response lane
          * @property {mds.IErrorResponse|null} [error] Response error
          * @property {string|null} [output] Response output
          */
@@ -907,6 +908,14 @@ $root.mds = (function() {
                     if (properties[keys[i]] != null)
                         this[keys[i]] = properties[keys[i]];
         }
+
+        /**
+         * Response lane.
+         * @member {number} lane
+         * @memberof mds.Response
+         * @instance
+         */
+        Response.prototype.lane = 0;
 
         /**
          * Response error.
@@ -962,10 +971,12 @@ $root.mds = (function() {
         Response.encode = function encode(message, writer) {
             if (!writer)
                 writer = $Writer.create();
+            if (message.lane != null && Object.hasOwnProperty.call(message, "lane"))
+                writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.lane);
             if (message.error != null && Object.hasOwnProperty.call(message, "error"))
-                $root.mds.ErrorResponse.encode(message.error, writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+                $root.mds.ErrorResponse.encode(message.error, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
             if (message.output != null && Object.hasOwnProperty.call(message, "output"))
-                writer.uint32(/* id 2, wireType 2 =*/18).string(message.output);
+                writer.uint32(/* id 3, wireType 2 =*/26).string(message.output);
             return writer;
         };
 
@@ -1001,9 +1012,12 @@ $root.mds = (function() {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
                 case 1:
-                    message.error = $root.mds.ErrorResponse.decode(reader, reader.uint32());
+                    message.lane = reader.uint32();
                     break;
                 case 2:
+                    message.error = $root.mds.ErrorResponse.decode(reader, reader.uint32());
+                    break;
+                case 3:
                     message.output = reader.string();
                     break;
                 default:
@@ -1042,6 +1056,9 @@ $root.mds = (function() {
             if (typeof message !== "object" || message === null)
                 return "object expected";
             var properties = {};
+            if (message.lane != null && message.hasOwnProperty("lane"))
+                if (!$util.isInteger(message.lane))
+                    return "lane: integer expected";
             if (message.error != null && message.hasOwnProperty("error")) {
                 properties.body = 1;
                 {
@@ -1072,6 +1089,8 @@ $root.mds = (function() {
             if (object instanceof $root.mds.Response)
                 return object;
             var message = new $root.mds.Response();
+            if (object.lane != null)
+                message.lane = object.lane >>> 0;
             if (object.error != null) {
                 if (typeof object.error !== "object")
                     throw TypeError(".mds.Response.error: object expected");
@@ -1095,6 +1114,10 @@ $root.mds = (function() {
             if (!options)
                 options = {};
             var object = {};
+            if (options.defaults)
+                object.lane = 0;
+            if (message.lane != null && message.hasOwnProperty("lane"))
+                object.lane = message.lane;
             if (message.error != null && message.hasOwnProperty("error")) {
                 object.error = $root.mds.ErrorResponse.toObject(message.error, options);
                 if (options.oneofs)
@@ -1527,7 +1550,6 @@ $root.mds = (function() {
          * @interface ICluster
          * @property {mds.IClusterRegion|null} [primary] Cluster primary
          * @property {Array.<mds.IClusterRegion>|null} [replicas] Cluster replicas
-         * @property {string|null} [subspace] Cluster subspace
          */
 
         /**
@@ -1563,14 +1585,6 @@ $root.mds = (function() {
         Cluster.prototype.replicas = $util.emptyArray;
 
         /**
-         * Cluster subspace.
-         * @member {string} subspace
-         * @memberof mds.Cluster
-         * @instance
-         */
-        Cluster.prototype.subspace = "";
-
-        /**
          * Creates a new Cluster instance using the specified properties.
          * @function create
          * @memberof mds.Cluster
@@ -1599,8 +1613,6 @@ $root.mds = (function() {
             if (message.replicas != null && message.replicas.length)
                 for (var i = 0; i < message.replicas.length; ++i)
                     $root.mds.ClusterRegion.encode(message.replicas[i], writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
-            if (message.subspace != null && Object.hasOwnProperty.call(message, "subspace"))
-                writer.uint32(/* id 3, wireType 2 =*/26).string(message.subspace);
             return writer;
         };
 
@@ -1642,9 +1654,6 @@ $root.mds = (function() {
                     if (!(message.replicas && message.replicas.length))
                         message.replicas = [];
                     message.replicas.push($root.mds.ClusterRegion.decode(reader, reader.uint32()));
-                    break;
-                case 3:
-                    message.subspace = reader.string();
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -1695,9 +1704,6 @@ $root.mds = (function() {
                         return "replicas." + error;
                 }
             }
-            if (message.subspace != null && message.hasOwnProperty("subspace"))
-                if (!$util.isString(message.subspace))
-                    return "subspace: string expected";
             return null;
         };
 
@@ -1728,8 +1734,6 @@ $root.mds = (function() {
                     message.replicas[i] = $root.mds.ClusterRegion.fromObject(object.replicas[i]);
                 }
             }
-            if (object.subspace != null)
-                message.subspace = String(object.subspace);
             return message;
         };
 
@@ -1748,10 +1752,8 @@ $root.mds = (function() {
             var object = {};
             if (options.arrays || options.defaults)
                 object.replicas = [];
-            if (options.defaults) {
+            if (options.defaults)
                 object.primary = null;
-                object.subspace = "";
-            }
             if (message.primary != null && message.hasOwnProperty("primary"))
                 object.primary = $root.mds.ClusterRegion.toObject(message.primary, options);
             if (message.replicas && message.replicas.length) {
@@ -1759,8 +1761,6 @@ $root.mds = (function() {
                 for (var j = 0; j < message.replicas.length; ++j)
                     object.replicas[j] = $root.mds.ClusterRegion.toObject(message.replicas[j], options);
             }
-            if (message.subspace != null && message.hasOwnProperty("subspace"))
-                object.subspace = message.subspace;
             return object;
         };
 

@@ -19,8 +19,12 @@ async function run() {
     endpoint: ws,
     secretKey: secret,
     store: "xxx",
+    numLanes: 4,
   });
   await client.init();
+
+  const res = await client.run("this.output = 42");
+  console.log(res);
 }
 
 run().then(() => {

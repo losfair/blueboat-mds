@@ -389,6 +389,9 @@ export namespace mds {
     /** Properties of a Response. */
     interface IResponse {
 
+        /** Response lane */
+        lane?: (number|null);
+
         /** Response error */
         error?: (mds.IErrorResponse|null);
 
@@ -404,6 +407,9 @@ export namespace mds {
          * @param [properties] Properties to set
          */
         constructor(properties?: mds.IResponse);
+
+        /** Response lane. */
+        public lane: number;
 
         /** Response error. */
         public error?: (mds.IErrorResponse|null);
@@ -679,9 +685,6 @@ export namespace mds {
 
         /** Cluster replicas */
         replicas?: (mds.IClusterRegion[]|null);
-
-        /** Cluster subspace */
-        subspace?: (string|null);
     }
 
     /** Represents a Cluster. */
@@ -698,9 +701,6 @@ export namespace mds {
 
         /** Cluster replicas. */
         public replicas: mds.IClusterRegion[];
-
-        /** Cluster subspace. */
-        public subspace: string;
 
         /**
          * Creates a new Cluster instance using the specified properties.
