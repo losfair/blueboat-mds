@@ -1,13 +1,20 @@
 package main
 
 import (
+	"os"
+
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/losfair/blueboat-mds/mds"
 	"go.uber.org/zap"
 )
 
 func main() {
-	logger, err := zap.NewProduction()
+	zapConfig := zap.NewProductionConfig()
+	if os.Getenv("MDS_DEBUG") == "1" {
+		zapConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	}
+
+	logger, err := zapConfig.Build()
 	if err != nil {
 		panic(err)
 	}

@@ -16,8 +16,8 @@ import (
 type MdsSession struct {
 	logger  *zap.Logger
 	cluster *MdsCluster
-	vm      *goja.Runtime
 	ss      subspace.Subspace
+	vm      *goja.Runtime
 }
 
 type jsPrimaryTxn struct {
@@ -107,8 +107,8 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 	s := &MdsSession{
 		logger:  logger,
 		cluster: cluster,
-		vm:      goja.New(),
 		ss:      ss,
+		vm:      goja.New(),
 	}
 	s.vm.Set("createPrimaryTransaction", s.createPrimaryTransaction)
 	s.vm.Set("createReplicaTransaction", s.createReplicaTransaction)
@@ -159,7 +159,7 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, xmit func(proto.Messa
 		}
 
 		_, err := s.vm.RunString(req.Program)
-		outputValue := s.vm.GlobalObject().Get("output").Export()
+		outputValue := s.vm.GlobalObject().Get("output")
 		s.vm.GlobalObject().Delete("output")
 
 		if err != nil {
@@ -173,8 +173,11 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, xmit func(proto.Messa
 				},
 			})
 		} else {
+			if outputValue == nil {
+				outputValue = goja.Undefined()
+			}
 			var output []byte
-			output, err = json.Marshal(outputValue)
+			output, err = json.Marshal(outputValue.Export())
 			if err != nil {
 				s.logger.Error("failed to marshal output", zap.Error(err))
 				err = xmit(&protocol.Response{
