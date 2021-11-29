@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
-	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/gorilla/websocket"
@@ -31,10 +30,7 @@ type Mds struct {
 	backdoorPublicKey string
 	primaryRootStore  *fdb.Database
 	replicaRootStore  *fdb.Database
-	dir               directory.Directory
-	clustersDir       directory.DirectorySubspace
-	storesDir         directory.DirectorySubspace
-	usersDir          directory.DirectorySubspace
+	subspace          subspace.Subspace
 	region            string
 	tempDir           string
 	clusters          atomic.Value // map[string]*MdsCluster
@@ -127,21 +123,7 @@ func (m *Mds) Run() error {
 		m.logger.Info("opened replica root store")
 	}
 
-	nodeSS := subspace.Sub(config.RootStore.Subspace, "n")
-	contentSS := subspace.Sub(config.RootStore.Subspace, "c")
-	m.dir = directory.NewDirectoryLayer(nodeSS, contentSS, false)
-	m.clustersDir, err = m.dir.CreateOrOpen(m.PrimaryTransactor(), []string{"clusters"}, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to create or open clusters directory")
-	}
-	m.storesDir, err = m.dir.CreateOrOpen(m.PrimaryTransactor(), []string{"stores"}, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to create or open stores directory")
-	}
-	m.usersDir, err = m.dir.CreateOrOpen(m.PrimaryTransactor(), []string{"users"}, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to create or open users directory")
-	}
+	m.subspace = subspace.Sub(config.RootStore.Subspace)
 
 	m.logger.Info("opening clusters")
 	if err := m.openClustersOnce(); err != nil {
@@ -177,16 +159,17 @@ func (m *Mds) lookupCluster(name string) (*MdsCluster, error) {
 func (m *Mds) openClustersOnce() error {
 	oldClusters := m.clusters.Load().(map[string]*MdsCluster)
 	clusters := make(map[string]*MdsCluster)
+	clustersSub := m.subspace.Sub("clusters")
 
 	ifc, err := m.ReplicaReadTransactor().ReadTransact(func(txn fdb.ReadTransaction) (interface{}, error) {
-		return txn.GetRange(m.clustersDir, fdb.RangeOptions{}).GetSliceWithError()
+		return txn.GetRange(clustersSub, fdb.RangeOptions{}).GetSliceWithError()
 	})
 	if err != nil {
 		return err
 	}
 	kv := ifc.([]fdb.KeyValue)
 	for _, pair := range kv {
-		tuple, err := m.clustersDir.Unpack(pair.Key)
+		tuple, err := clustersSub.Unpack(pair.Key)
 		if err != nil {
 			m.logger.Error("failed to unpack cluster key", zap.Error(err))
 			continue
@@ -224,22 +207,28 @@ func (m *Mds) openClustersOnce() error {
 }
 
 func (m *Mds) readRoleListFromReplica(key fdb.KeyConvertible) (*protocol.RoleList, error) {
-	data, err := m.readBytesValueFromReplica(key)
-	if err != nil {
-		return nil, err
-	}
-	if data == nil {
-		return nil, nil
-	}
 	var grants protocol.RoleList
-	if err := protojson.Unmarshal(data, &grants); err != nil {
-		return nil, err
-	}
-	return &grants, nil
+	_, err := m.readProtojsonFromReplica(key, &grants)
+	return &grants, err
 }
 
-func (m *Mds) checkStorePermission(publicKey []byte, store directory.DirectorySubspace) (bool, error) {
-	userRoles, err := m.readRoleListFromReplica(m.usersDir.Pack([]tuple.TupleElement{base64.StdEncoding.EncodeToString(publicKey)}))
+func (m *Mds) readProtojsonFromReplica(key fdb.KeyConvertible, out proto.Message) (bool, error) {
+	data, err := m.readBytesValueFromReplica(key)
+	if err != nil {
+		return false, err
+	}
+	if data == nil {
+		return false, nil
+	}
+	if err := protojson.Unmarshal(data, out); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (m *Mds) checkStorePermission(publicKey []byte, store subspace.Subspace) (bool, error) {
+	usersSub := m.subspace.Sub("users")
+	userRoles, err := m.readRoleListFromReplica(usersSub.Pack([]tuple.TupleElement{base64.StdEncoding.EncodeToString(publicKey)}))
 	if err != nil {
 		return false, err
 	}
@@ -306,12 +295,8 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	store, err := m.storesDir.Open(m.ReplicaReadTransactor(), []string{loginMsg.Store}, nil)
-	if err != nil {
-		logger.Error("failed to open store", zap.String("name", loginMsg.Store), zap.Error(err))
-		return
-	}
-
+	// Now we are authenticated but NOT authorized.
+	store := m.subspace.Sub("stores").Sub(loginMsg.Store)
 	permissionOk, err := m.checkStorePermission(loginMsg.PublicKey, store)
 	if err != nil {
 		logger.Error("failed to check store permission", zap.Error(err))
@@ -337,24 +322,27 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Now we are authenticated and authorized.
 	logger = logger.With(zap.String("store", loginMsg.Store), zap.String("user", publicKeyB64))
 
-	clusterNameBytes, err := m.readBytesValueFromReplica(store.Pack([]tuple.TupleElement{"name"}))
+	var storeInfo protocol.StoreInfo
+	ok, err := m.readProtojsonFromReplica(store.Pack([]tuple.TupleElement{"info"}), &storeInfo)
 	if err != nil {
-		logger.Error("failed to read cluster name", zap.Error(err))
+		logger.Error("failed to read store info", zap.Error(err))
 		return
 	}
-	if clusterNameBytes == nil {
-		logger.Error("no cluster name")
+	if !ok {
+		logger.Error("store not found")
 		return
 	}
 
-	clusterName := string(clusterNameBytes)
-	cluster, err := m.lookupCluster(clusterName)
+	cluster, err := m.lookupCluster(storeInfo.Cluster)
 	if err != nil {
 		logger.Error("failed to lookup cluster", zap.Error(err))
 		return
 	}
+
+	storeSS := subspace.Sub(storeInfo.Subspace)
 
 	channels := make([]chan *protocol.Request, 0, int(loginMsg.MuxWidth))
 	for i := uint32(0); i < loginMsg.MuxWidth; i++ {
@@ -369,7 +357,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	var xmitMu sync.Mutex
 
 	for i := 0; i < int(loginMsg.MuxWidth); i++ {
-		session := NewMdsSession(logger.With(zap.Int("lane", i)), cluster)
+		session := NewMdsSession(logger.With(zap.Int("lane", i)), cluster, storeSS)
 		go session.Run(channels[i], func(m proto.Message) error {
 			xmitMu.Lock()
 			defer xmitMu.Unlock()
