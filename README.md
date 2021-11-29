@@ -1,6 +1,6 @@
 # blueboat-mds
 
-Blueboat Metadata Service is a distributed metadata manager for [Blueboat](https://github.com/losfair/blueboat).
+Blueboat Metadata Service is a distributed metadata manager for multi-region deployment of [Blueboat](https://github.com/losfair/blueboat).
 
 ## Prerequisites
 
