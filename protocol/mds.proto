@@ -20,6 +20,7 @@ message LoginResponse {
 message Request {
   uint32 lane = 1;
   string program = 2;
+  string data = 3;
 }
 
 message Response {

@@ -145,13 +145,17 @@ export class MdsClient {
     });
   }
 
-  async run(program: string): Promise<unknown> {
+  async run(program: string, data?: unknown): Promise<unknown> {
     const lane = await this.grabLane();
     try {
-      const req = mds.Request.encode({
+      const reqI: mds.IRequest = {
         lane,
         program,
-      });
+      };
+      if(data !== undefined) {
+        reqI.data = JSON.stringify(data);
+      }
+      const req = mds.Request.encode(reqI);
       this.ws!.send(req.finish());
       const res = await this.waitResponse(lane);
       if (res.error) {

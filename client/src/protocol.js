@@ -681,6 +681,7 @@ $root.mds = (function() {
          * @interface IRequest
          * @property {number|null} [lane] Request lane
          * @property {string|null} [program] Request program
+         * @property {string|null} [data] Request data
          */
 
         /**
@@ -715,6 +716,14 @@ $root.mds = (function() {
         Request.prototype.program = "";
 
         /**
+         * Request data.
+         * @member {string} data
+         * @memberof mds.Request
+         * @instance
+         */
+        Request.prototype.data = "";
+
+        /**
          * Creates a new Request instance using the specified properties.
          * @function create
          * @memberof mds.Request
@@ -742,6 +751,8 @@ $root.mds = (function() {
                 writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.lane);
             if (message.program != null && Object.hasOwnProperty.call(message, "program"))
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.program);
+            if (message.data != null && Object.hasOwnProperty.call(message, "data"))
+                writer.uint32(/* id 3, wireType 2 =*/26).string(message.data);
             return writer;
         };
 
@@ -781,6 +792,9 @@ $root.mds = (function() {
                     break;
                 case 2:
                     message.program = reader.string();
+                    break;
+                case 3:
+                    message.data = reader.string();
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -823,6 +837,9 @@ $root.mds = (function() {
             if (message.program != null && message.hasOwnProperty("program"))
                 if (!$util.isString(message.program))
                     return "program: string expected";
+            if (message.data != null && message.hasOwnProperty("data"))
+                if (!$util.isString(message.data))
+                    return "data: string expected";
             return null;
         };
 
@@ -842,6 +859,8 @@ $root.mds = (function() {
                 message.lane = object.lane >>> 0;
             if (object.program != null)
                 message.program = String(object.program);
+            if (object.data != null)
+                message.data = String(object.data);
             return message;
         };
 
@@ -861,11 +880,14 @@ $root.mds = (function() {
             if (options.defaults) {
                 object.lane = 0;
                 object.program = "";
+                object.data = "";
             }
             if (message.lane != null && message.hasOwnProperty("lane"))
                 object.lane = message.lane;
             if (message.program != null && message.hasOwnProperty("program"))
                 object.program = message.program;
+            if (message.data != null && message.hasOwnProperty("data"))
+                object.data = message.data;
             return object;
         };
 

@@ -3,6 +3,7 @@ package mds
 import (
 	"encoding/base64"
 	"encoding/json"
+	"time"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
@@ -225,9 +226,22 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, stop <-chan struct{},
 			return
 		}
 
+		var data interface{}
+		if req.Data != "" {
+			if err := json.Unmarshal([]byte(req.Data), &data); err != nil {
+				s.logger.Panic("failed to unmarshal request data", zap.Error(err))
+			}
+		}
+
+		startTime := time.Now()
+		s.vm.GlobalObject().Set("data", s.vm.ToValue(data))
 		_, err := s.vm.RunString(req.Program)
+		endTime := time.Now()
+		s.logger.Debug("execution time", zap.Duration("duration", endTime.Sub(startTime)))
+
 		outputValue := s.vm.GlobalObject().Get("output")
 		s.vm.GlobalObject().Delete("output")
+		s.vm.GlobalObject().Delete("data")
 
 		if err != nil {
 			s.logger.Error("failed to run program", zap.Error(err))

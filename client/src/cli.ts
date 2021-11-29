@@ -68,6 +68,17 @@ async function run() {
     `);
     console.log(res);
   }
+
+  {
+    const res = await client.run(`
+    output = {
+      incoming: data,
+    };
+    `, {
+      "key": "value",
+    });
+    console.log(res);
+  }
 }
 
 run().then(() => {

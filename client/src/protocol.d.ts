@@ -298,6 +298,9 @@ export namespace mds {
 
         /** Request program */
         program?: (string|null);
+
+        /** Request data */
+        data?: (string|null);
     }
 
     /** Represents a Request. */
@@ -314,6 +317,9 @@ export namespace mds {
 
         /** Request program. */
         public program: string;
+
+        /** Request data. */
+        public data: string;
 
         /**
          * Creates a new Request instance using the specified properties.
