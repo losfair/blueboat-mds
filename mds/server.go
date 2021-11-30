@@ -269,6 +269,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 
 	loginChallenge := protocol.LoginChallenge{
 		Challenge: make([]byte, 32),
+		Version:   LoginVersion,
 	}
 	if _, err := rand.Read(loginChallenge.Challenge); err != nil {
 		logger.Error("failed to generate challenge", zap.Error(err))

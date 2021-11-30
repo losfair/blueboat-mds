@@ -1,6 +1,7 @@
 package mds
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"time"
@@ -36,7 +37,9 @@ type jsFutureByteSlice struct {
 }
 
 type jsRangeResult struct {
-	rr fdb.RangeResult
+	s          *MdsSession
+	fullPrefix []byte
+	rr         fdb.RangeResult
 }
 
 type jsFutureNil struct {
@@ -52,7 +55,7 @@ func jsTxnCore_Get(s *MdsSession, txn fdb.ReadTransaction, key goja.Value) jsFut
 	}
 }
 
-func jsTxnCore_PrefixList(s *MdsSession, txn fdb.ReadTransaction, prefix goja.Value, limit uint32) jsRangeResult {
+func jsTxnCore_PrefixList(s *MdsSession, txn fdb.ReadTransaction, prefix goja.Value, limit uint32, after goja.Value) jsRangeResult {
 	if limit == 0 || limit > 1000 {
 		panic("PrefixList: invalid limit")
 	}
@@ -62,7 +65,22 @@ func jsTxnCore_PrefixList(s *MdsSession, txn fdb.ReadTransaction, prefix goja.Va
 	if err != nil {
 		panic(err)
 	}
+
+	if !after.SameAs(goja.Undefined()) {
+		afterNormalized := s.normalizeJsBytes(after)
+
+		startOverride := make([]byte, 0, len(s.ss.Bytes())+len(afterNormalized)+1)
+		startOverride = append(startOverride, s.ss.Bytes()...)
+		startOverride = append(startOverride, afterNormalized...)
+		startOverride = append(startOverride, 0)
+		if bytes.Compare(startOverride, r.Begin.FDBKey()) > 0 {
+			r.Begin = fdb.Key(startOverride)
+		}
+	}
+
 	return jsRangeResult{
+		s:          s,
+		fullPrefix: rawKey,
 		rr: txn.GetRange(r, fdb.RangeOptions{
 			Limit: int(limit),
 		}),
@@ -73,8 +91,8 @@ func (t jsReplicaTxn) Get(key goja.Value) jsFutureByteSlice {
 	return jsTxnCore_Get(t.s, t.txn, key)
 }
 
-func (t jsReplicaTxn) PrefixList(prefix goja.Value, limit uint32) jsRangeResult {
-	return jsTxnCore_PrefixList(t.s, t.txn, prefix, limit)
+func (t jsReplicaTxn) PrefixList(prefix goja.Value, limit uint32, after goja.Value) jsRangeResult {
+	return jsTxnCore_PrefixList(t.s, t.txn, prefix, limit, after)
 }
 
 func (f jsFutureByteSlice) Wait() goja.ArrayBuffer {
@@ -107,8 +125,8 @@ func (t jsPrimaryTxn) Delete(key goja.Value) {
 	t.txn.Clear(fdb.Key(rawKey))
 }
 
-func (t jsPrimaryTxn) PrefixList(prefix goja.Value, limit uint32) jsRangeResult {
-	return jsTxnCore_PrefixList(t.s, t.txn, prefix, limit)
+func (t jsPrimaryTxn) PrefixList(prefix goja.Value, limit uint32, after goja.Value) jsRangeResult {
+	return jsTxnCore_PrefixList(t.s, t.txn, prefix, limit, after)
 }
 
 func (t jsPrimaryTxn) PrefixDelete(prefix goja.Value) {
@@ -125,6 +143,20 @@ func (t jsPrimaryTxn) Commit() jsFutureNil {
 	return jsFutureNil{future: t.txn.Commit()}
 }
 
+func (r jsRangeResult) Collect() []goja.Value {
+	it := r.rr.Iterator()
+	var out []goja.Value
+	for it.Advance() {
+		kv := it.MustGet()
+		pair := r.s.vm.ToValue([]goja.Value{
+			r.s.vm.ToValue(r.s.vm.NewArrayBuffer(kv.Key[len(r.fullPrefix):])),
+			r.s.vm.ToValue(r.s.vm.NewArrayBuffer(kv.Value)),
+		})
+		out = append(out, pair)
+	}
+	return out
+}
+
 func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace) *MdsSession {
 	s := &MdsSession{
 		logger:  logger,
@@ -132,6 +164,9 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 		ss:      ss,
 		vm:      goja.New(),
 	}
+
+	s.patchJsForLinearTimeAndMemory()
+
 	s.vm.Set("createPrimaryTransaction", s.createPrimaryTransaction)
 	s.vm.Set("createReplicaTransaction", s.createReplicaTransaction)
 	s.vm.Set("base64Encode", s.jsBase64Encode)
@@ -139,6 +174,13 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 	s.vm.Set("stringToArrayBuffer", s.stringToArrayBuffer)
 	s.vm.Set("arrayBufferToString", s.arrayBufferToString)
 	return s
+}
+
+func (s *MdsSession) patchJsForLinearTimeAndMemory() {
+	// JS regular expressions are not guaranteed to be linear time.
+	s.vm.GlobalObject().Delete("RegExp")
+
+	// TODO: Arrays
 }
 
 func (s *MdsSession) jsBase64Encode(value goja.ArrayBuffer) string {
