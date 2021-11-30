@@ -7,6 +7,9 @@ export namespace mds {
 
         /** LoginChallenge challenge */
         challenge?: (Uint8Array|null);
+
+        /** LoginChallenge version */
+        version?: (string|null);
     }
 
     /** Represents a LoginChallenge. */
@@ -20,6 +23,9 @@ export namespace mds {
 
         /** LoginChallenge challenge. */
         public challenge: Uint8Array;
+
+        /** LoginChallenge version. */
+        public version: string;
 
         /**
          * Creates a new LoginChallenge instance using the specified properties.

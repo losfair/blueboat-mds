@@ -6,6 +6,7 @@
   "scripts": {
     "check": "tsc",
     "build-cli": "esbuild --bundle --platform=node --target=node16 --outfile=dist/cli_bundle.js ./src/cli.ts",
+    "build-web": "node ./esbuild_web.mjs",
     "protobuf": "pbjs -t static-module -w commonjs -o src/protocol.js ../protocol/mds.proto && pbts -o src/protocol.d.ts src/protocol.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -20,7 +21,9 @@
   },
   "homepage": "https://github.com/losfair/blueboat-mds#readme",
   "devDependencies": {
+    "@esbuild-plugins/node-modules-polyfill": "^0.1.2",
     "@types/node": "^16.11.10",
+    "@types/shell-quote": "^1.7.1",
     "@types/ws": "^8.2.0",
     "@types/yargs": "^17.0.7",
     "esbuild": "^0.14.0",
@@ -32,6 +35,8 @@
     "isomorphic-ws": "^4.0.1",
     "js-base64": "^3.7.2",
     "protobufjs": "^6.11.2",
+    "shell-quote": "^1.7.3",
+    "winston": "^3.3.3",
     "ws": "^8.3.0",
     "yargs": "^17.2.1"
   }

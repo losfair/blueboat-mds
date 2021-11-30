@@ -3,6 +3,11 @@ import { mds } from "./protocol";
 import * as ed25519 from '@noble/ed25519';
 import { Base64 } from 'js-base64';
 import { Sema } from "async-sema";
+import winston from "winston";
+
+export interface MdsServerInfo {
+  version: string;
+}
 
 export class MdsClient {
   private ws: WebSocket | null;
@@ -15,6 +20,7 @@ export class MdsClient {
   private numLanes: number;
   private laneCompletions: Map<number, { resolve: (res: mds.Response) => void, reject: (err: Error) => void }> = new Map();
   private broken: boolean = false;
+  private serverInfo: MdsServerInfo | null = null;
 
   constructor({ endpoint, secretKey, store, numLanes }: { endpoint: string, secretKey: string, store: string, numLanes: number }) {
     this.ws = null;
@@ -35,19 +41,19 @@ export class MdsClient {
 
   async init() {
     this.publicKey = await ed25519.getPublicKey(this.secretKey);
-    console.log(`[MdsClient] public key: ${Base64.fromUint8Array(this.publicKey)}`)
+    winston.info(`[MdsClient] public key: ${Base64.fromUint8Array(this.publicKey)}`)
     this.ws = new WebSocket(this.endpoint);
 
-    const authProm: Promise<void> = new Promise((resolve, reject) => {
+    const authProm: Promise<MdsServerInfo> = new Promise((resolve, reject) => {
       this.ws!.onerror = (e) => {
-        reject(new Error(`ws error: ${e}`));
+        reject(new Error(`ws error: ${e.error}`));
       }
       this.ws!.onclose = (e) => {
-        reject(new Error(`ws closed: ${e}`));
+        reject(new Error(`ws closed: ${e.reason}`));
       }
 
       this.ws!.on('open', () => {
-        console.log('[MdsClient] connected');
+        winston.info('[MdsClient] connected');
         this.ws!.onmessage = async (event) => {
           try {
             const challenge = mds.LoginChallenge.decode(normalizeWsData(event.data));
@@ -64,7 +70,9 @@ export class MdsClient {
               try {
                 const loginResult = mds.LoginResponse.decode(normalizeWsData(event.data));
                 if (loginResult.ok) {
-                  resolve();
+                  resolve({
+                    version: challenge.version,
+                  });
                 } else {
                   reject(new Error('Login failed'));
                 }
@@ -79,34 +87,42 @@ export class MdsClient {
         };
       });
     });
-    await authProm;
-    console.log("[MdsClient] logged in");
+    this.serverInfo = await authProm;
+    winston.info("[MdsClient] logged in");
     this.ws!.onmessage = this.onWsMessage.bind(this);
     this.ws!.onerror = this.onWsError.bind(this);
     this.ws!.onclose = this.onWsClose.bind(this);
   }
 
+  close() {
+    this.ws?.close();
+  }
+
+  getServerInfo(): MdsServerInfo {
+    if(!this.serverInfo) throw new Error("not initialized");
+    return this.serverInfo;
+  }
+
   private resetWsHandlers() {
     this.ws!.onmessage = (event) => {
-      console.error("unknown ws event", event);
+      winston.error("unknown ws event", event);
     }
     this.ws!.onerror = (event) => {
-      console.error("ws error", event);
+      winston.error("ws error", event);
     }
     this.ws!.onclose = (event) => {
-      console.error("ws close", event);
+      winston.error("ws close", event);
     }
   }
 
   private onWsMessage(e: WebSocket.MessageEvent) {
     const msg = mds.Response.decode(normalizeWsData(e.data));
-    console.log(msg);
     this.laneCompletions.get(msg.lane)!.resolve(msg);
     this.laneCompletions.delete(msg.lane);
   }
 
   private onWsError(e: WebSocket.ErrorEvent) {
-    console.error("onWsError", e)
+    winston.error("ws error", e);
     this.laneCompletions.forEach((v, k) => {
       v.reject(new Error("websocket error"));
     })
@@ -115,7 +131,7 @@ export class MdsClient {
   }
 
   private onWsClose(e: WebSocket.CloseEvent) {
-    console.error("onWsClose", e)
+    winston.error("onWsClose", e)
     this.laneCompletions.forEach((v, k) => {
       v.reject(new Error("websocket closed"));
     })

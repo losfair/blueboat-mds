@@ -1,14 +1,10 @@
 import { MdsClient } from "./client";
+import * as fs from "fs";
+import * as winston from "winston";
 
 const yargs = require("yargs");
-const { hideBin } = require('yargs/helpers')
 
-async function run() {
-  const argv = await yargs(hideBin(process.argv))
-    .usage('Usage: $0 --ws <ws://server:port>')
-    .demandOption(["ws"])
-    .argv;
-  const ws: string = argv.ws;
+async function run(server: string, store: string, program: string) {
   const secret = process.env.MDS_SECRET;
   if(!secret) {
     console.error("MDS_SECRET is not set");
@@ -16,75 +12,56 @@ async function run() {
   }
 
   const client = new MdsClient({
-    endpoint: ws,
+    endpoint: server,
     secretKey: secret,
-    store: "xxx",
-    numLanes: 4,
+    store,
+    numLanes: 1,
   });
   await client.init();
-
-  try {
-    const res = await client.run("throw new Error('xxx');");
-    console.log(res);
-  } catch(e) {
-    console.log(e);
-  }
-
-  try {
-    const res = await client.run("throw new Error('yyy');");
-    console.log(res);
-  } catch(e) {
-    console.log(e);
-  }
-
-  {
-    const res = await client.run("1 + 2");
-    console.log(res);
-  }
-
-  {
-    const res = await client.run("output = 1");
-    console.log(res);
-  }
-
-  {
-    const res = await client.run("3 + 4");
-    console.log(res);
-  }
-
-  {
-    const res = await client.run(`
-    var txn = createPrimaryTransaction();
-    txn.Set("hello", "world");
-    txn.Commit().Wait();
-    `);
-    console.log(res);
-  }
-
-  {
-    const res = await client.run(`
-    var txn = createPrimaryTransaction();
-    output = arrayBufferToString(txn.Get("hello").Wait());
-    `);
-    console.log(res);
-  }
-
-  {
-    const res = await client.run(`
-    output = {
-      incoming: data,
-    };
-    `, {
-      "key": "value",
-    });
-    console.log(res);
-  }
+  const out = await client.run(program);
+  console.log(JSON.stringify(out));
 }
 
-run().then(() => {
-  process.exit(0);
+function terminateWith<T>(p: Promise<T>) {
+  p.then(() => {
+    process.exit(0);
+  }).catch(e => {
+    console.error(e);
+    process.exit(1);
+  });
+}
+
+winston.configure({
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json(),
+  ),
+  transports: [
+    new winston.transports.Console({
+      stderrLevels: ["error", "warn", "notice", "info", "debug"],
+    }),
+  ]
+});
+
+yargs.command('run <script>', 'run a transaction script', (yargs: any) => {
+  return yargs
+    .option('store', {
+      type: 'string',
+      demandOption: true,
+      description: 'name of the store to use',
+    })
+    .positional('script', {
+      describe: 'path to transaction script',
+      type: 'string',
+    })
+}, (argv: any) => {
+  const script = fs.readFileSync(argv.script, "utf-8");
+  terminateWith(run(argv.server, argv.store, script));
 })
-.catch((err) => {
-  console.error(err);
-  process.exit(1);
+.option('server', {
+  alias: "s",
+  demandOption: true,
+  type: 'string',
+  description: 'Blueboat MDS server URL (ws://server:port)',
 })
+.parse()

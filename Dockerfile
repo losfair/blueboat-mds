@@ -4,7 +4,7 @@ WORKDIR /root
 RUN wget https://www.foundationdb.org/downloads/6.3.22/ubuntu/installers/foundationdb-clients_6.3.22-1_amd64.deb && dpkg -i foundationdb-clients_6.3.22-1_amd64.deb
 COPY . /app
 WORKDIR /app
-RUN go build
+RUN go test ./... && go build
 
 FROM debian:bullseye-slim
 COPY --from=0 /root/foundationdb-clients_6.3.22-1_amd64.deb /root/

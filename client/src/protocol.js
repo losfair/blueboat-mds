@@ -25,6 +25,7 @@ $root.mds = (function() {
          * @memberof mds
          * @interface ILoginChallenge
          * @property {Uint8Array|null} [challenge] LoginChallenge challenge
+         * @property {string|null} [version] LoginChallenge version
          */
 
         /**
@@ -49,6 +50,14 @@ $root.mds = (function() {
          * @instance
          */
         LoginChallenge.prototype.challenge = $util.newBuffer([]);
+
+        /**
+         * LoginChallenge version.
+         * @member {string} version
+         * @memberof mds.LoginChallenge
+         * @instance
+         */
+        LoginChallenge.prototype.version = "";
 
         /**
          * Creates a new LoginChallenge instance using the specified properties.
@@ -76,6 +85,8 @@ $root.mds = (function() {
                 writer = $Writer.create();
             if (message.challenge != null && Object.hasOwnProperty.call(message, "challenge"))
                 writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.challenge);
+            if (message.version != null && Object.hasOwnProperty.call(message, "version"))
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.version);
             return writer;
         };
 
@@ -112,6 +123,9 @@ $root.mds = (function() {
                 switch (tag >>> 3) {
                 case 1:
                     message.challenge = reader.bytes();
+                    break;
+                case 2:
+                    message.version = reader.string();
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -151,6 +165,9 @@ $root.mds = (function() {
             if (message.challenge != null && message.hasOwnProperty("challenge"))
                 if (!(message.challenge && typeof message.challenge.length === "number" || $util.isString(message.challenge)))
                     return "challenge: buffer expected";
+            if (message.version != null && message.hasOwnProperty("version"))
+                if (!$util.isString(message.version))
+                    return "version: string expected";
             return null;
         };
 
@@ -171,6 +188,8 @@ $root.mds = (function() {
                     $util.base64.decode(object.challenge, message.challenge = $util.newBuffer($util.base64.length(object.challenge)), 0);
                 else if (object.challenge.length)
                     message.challenge = object.challenge;
+            if (object.version != null)
+                message.version = String(object.version);
             return message;
         };
 
@@ -187,7 +206,7 @@ $root.mds = (function() {
             if (!options)
                 options = {};
             var object = {};
-            if (options.defaults)
+            if (options.defaults) {
                 if (options.bytes === String)
                     object.challenge = "";
                 else {
@@ -195,8 +214,12 @@ $root.mds = (function() {
                     if (options.bytes !== Array)
                         object.challenge = $util.newBuffer(object.challenge);
                 }
+                object.version = "";
+            }
             if (message.challenge != null && message.hasOwnProperty("challenge"))
                 object.challenge = options.bytes === String ? $util.base64.encode(message.challenge, 0, message.challenge.length) : options.bytes === Array ? Array.prototype.slice.call(message.challenge) : message.challenge;
+            if (message.version != null && message.hasOwnProperty("version"))
+                object.version = message.version;
             return object;
         };
 
