@@ -271,6 +271,8 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 
+	c.SetReadLimit(MaxWebSocketIncomingMessageSize)
+
 	loginChallenge := protocol.LoginChallenge{
 		Challenge: make([]byte, 32),
 		Version:   LoginVersion,
@@ -291,7 +293,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if loginMsg.MuxWidth == 0 || loginMsg.MuxWidth > 16 {
+	if loginMsg.MuxWidth == 0 || loginMsg.MuxWidth > MaxMuxWidth {
 		logger.Error("invalid mux width", zap.Uint32("width", loginMsg.MuxWidth))
 		return
 	}
@@ -358,7 +360,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 
 	channels := make([]chan *protocol.Request, 0, int(loginMsg.MuxWidth))
 	for i := uint32(0); i < loginMsg.MuxWidth; i++ {
-		channels = append(channels, make(chan *protocol.Request, 64))
+		channels = append(channels, make(chan *protocol.Request, 1))
 	}
 	defer func() {
 		for _, ch := range channels {
