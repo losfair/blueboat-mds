@@ -234,7 +234,7 @@ func (m *Mds) readProtojsonFromReplica(key fdb.KeyConvertible, out proto.Message
 
 func (m *Mds) checkStorePermission(publicKey []byte, store subspace.Subspace) (bool, error) {
 	usersSub := m.subspace.Sub("users")
-	userRoles, err := m.readRoleListFromReplica(usersSub.Pack([]tuple.TupleElement{base64.StdEncoding.EncodeToString(publicKey)}))
+	userRoles, err := m.readRoleListFromReplica(usersSub.Pack([]tuple.TupleElement{base64.StdEncoding.EncodeToString(publicKey), "roles"}))
 	if err != nil {
 		return false, err
 	}

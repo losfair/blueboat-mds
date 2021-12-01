@@ -1,7 +1,6 @@
 package mds
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"time"
@@ -61,25 +60,25 @@ func jsTxnCore_Get(s *MdsSession, txn fdb.ReadTransaction, key goja.Value) jsFut
 
 func jsTxnCore_PrefixList(s *MdsSession, txn fdb.ReadTransaction, prefix goja.Value, limit uint32, after goja.Value) jsRangeResult {
 	if limit == 0 || limit > 1000 {
-		panic("PrefixList: invalid limit")
+		panic(s.vm.ToValue("PrefixList: invalid limit"))
 	}
+	prefixNormalized := s.normalizeJsBytes(prefix)
 	rawKey := append([]byte(nil), s.ss.Bytes()...)
-	rawKey = append(rawKey, s.normalizeJsBytes(prefix)...)
+	rawKey = append(rawKey, prefixNormalized...)
 	r, err := fdb.PrefixRange(fdb.Key(rawKey))
 	if err != nil {
-		panic(err)
+		panic(s.vm.ToValue(err.Error()))
 	}
 
 	if !after.SameAs(goja.Undefined()) {
 		afterNormalized := s.normalizeJsBytes(after)
 
-		startOverride := make([]byte, 0, len(s.ss.Bytes())+len(afterNormalized)+1)
+		startOverride := make([]byte, 0, len(s.ss.Bytes())+len(prefixNormalized)+len(afterNormalized)+1)
 		startOverride = append(startOverride, s.ss.Bytes()...)
+		startOverride = append(startOverride, prefixNormalized...)
 		startOverride = append(startOverride, afterNormalized...)
 		startOverride = append(startOverride, 0)
-		if bytes.Compare(startOverride, r.Begin.FDBKey()) > 0 {
-			r.Begin = fdb.Key(startOverride)
-		}
+		r.Begin = fdb.Key(startOverride)
 	}
 
 	return jsRangeResult{
@@ -99,12 +98,12 @@ func (t jsReplicaTxn) PrefixList(prefix goja.Value, limit uint32, after goja.Val
 	return jsTxnCore_PrefixList(t.s, t.txn, prefix, limit, after)
 }
 
-func (f jsFutureByteSlice) Wait() goja.ArrayBuffer {
+func (f jsFutureByteSlice) Wait() goja.Value {
 	buf := f.future.MustGet()
 	if buf == nil {
-		return goja.ArrayBuffer{}
+		return goja.Null()
 	} else {
-		return f.s.vm.NewArrayBuffer(buf)
+		return f.s.vm.ToValue(f.s.vm.NewArrayBuffer(buf))
 	}
 }
 
@@ -138,7 +137,7 @@ func (t jsPrimaryTxn) PrefixDelete(prefix goja.Value) {
 	rawKey = append(rawKey, t.s.normalizeJsBytes(prefix)...)
 	r, err := fdb.PrefixRange(fdb.Key(rawKey))
 	if err != nil {
-		panic(err)
+		panic(t.s.vm.ToValue(err.Error()))
 	}
 	t.txn.ClearRange(r)
 }
@@ -188,7 +187,7 @@ func (s *MdsSession) jsBase64Encode(value goja.ArrayBuffer) string {
 func (s *MdsSession) jsBase64Decode(value string) goja.ArrayBuffer {
 	b, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
-		panic(err)
+		panic(s.vm.ToValue(err.Error()))
 	}
 	return s.vm.NewArrayBuffer(b)
 }
@@ -208,14 +207,14 @@ func (s *MdsSession) normalizeJsBytes(value goja.Value) []byte {
 	} else if v, ok := exp.(string); ok {
 		return []byte(v)
 	} else {
-		panic("cannot normalize js value to bytes")
+		panic(s.vm.ToValue("cannot normalize js value to bytes"))
 	}
 }
 
 func (s *MdsSession) createPrimaryTransaction(call goja.FunctionCall) goja.Value {
 	txn, err := s.cluster.primaryStore.CreateTransaction()
 	if err != nil {
-		panic(err)
+		panic(s.vm.ToValue(err.Error()))
 	}
 
 	return s.vm.ToValue(jsPrimaryTxn{
@@ -230,15 +229,15 @@ func (s *MdsSession) createReplicaTransaction(call goja.FunctionCall) goja.Value
 	if s.cluster.replicaStore != nil {
 		txn, err = s.cluster.replicaStore.CreateTransaction()
 		if err != nil {
-			panic(err)
+			panic(s.vm.ToValue(err.Error()))
 		}
 		if err := txn.Options().SetReadLockAware(); err != nil {
-			panic(err)
+			panic(s.vm.ToValue(err.Error()))
 		}
 	} else {
 		txn, err = s.cluster.primaryStore.CreateTransaction()
 		if err != nil {
-			panic(err)
+			panic(s.vm.ToValue(err.Error()))
 		}
 	}
 
@@ -292,7 +291,7 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, stop <-chan struct{},
 			endTime := time.Now()
 			prog = newProg
 			s.progCache.Add(hash, prog)
-			s.logger.Debug("compiled script", zap.Int("length", len(req.Program)), zap.Duration("duration", endTime.Sub(startTime)))
+			s.logger.Debug("compiled script", zap.String("program", req.Program), zap.Duration("duration", endTime.Sub(startTime)))
 		}
 
 		var data interface{}
