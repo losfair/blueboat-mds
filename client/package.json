@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/losfair/blueboat-mds#readme",
   "devDependencies": {
+    "@esbuild-plugins/node-globals-polyfill": "^0.1.1",
     "@esbuild-plugins/node-modules-polyfill": "^0.1.2",
     "@types/node": "^16.11.10",
     "@types/shell-quote": "^1.7.1",

@@ -1,3 +1,5 @@
 /dist/
 /node_modules/
 /playground/
+/web/app.min.js
+/web/app.min.js.map

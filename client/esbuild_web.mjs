@@ -1,16 +1,26 @@
 import NodeModulesPolyfills from '@esbuild-plugins/node-modules-polyfill'
+import GlobalsPolyfills from '@esbuild-plugins/node-globals-polyfill'
 import { build } from 'esbuild'
 
 const out = await build({
-  entryPoints: ['./src/client.ts'],
-  plugins: [NodeModulesPolyfills.default()],
+  entryPoints: ['./src/webcli.ts'],
+  plugins: [
+    NodeModulesPolyfills.default(),
+    GlobalsPolyfills.default({
+      process: true,
+      buffer: true,
+    })
+  ],
   target: 'chrome90',
   platform: "browser",
   bundle: true,
   format: "esm",
-  outfile: "dist/web_bundle.js",
+  outfile: "web/app.min.js",
   minify: true,
-  sourcemap: "external",
+  sourcemap: true,
+  define: {
+    "global": "window",
+  }
 })
 
 console.log(JSON.stringify(out, null, 2));
