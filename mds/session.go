@@ -9,17 +9,20 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 	"github.com/dop251/goja"
+	"github.com/golang/groupcache/lru"
 	"github.com/losfair/blueboat-mds/protocol"
 	"github.com/losfair/blueboat-mds/validator"
+	"github.com/zeebo/blake3"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )
 
 type MdsSession struct {
-	logger  *zap.Logger
-	cluster *MdsCluster
-	ss      subspace.Subspace
-	vm      *goja.Runtime
+	logger    *zap.Logger
+	cluster   *MdsCluster
+	ss        subspace.Subspace
+	vm        *goja.Runtime
+	progCache *lru.Cache
 }
 
 type jsPrimaryTxn struct {
@@ -160,10 +163,11 @@ func (r jsRangeResult) Collect() []goja.Value {
 
 func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace) *MdsSession {
 	s := &MdsSession{
-		logger:  logger,
-		cluster: cluster,
-		ss:      ss,
-		vm:      goja.New(),
+		logger:    logger,
+		cluster:   cluster,
+		ss:        ss,
+		vm:        goja.New(),
+		progCache: lru.New(16),
 	}
 
 	validator.PatchVM(s.vm)
@@ -262,6 +266,35 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, stop <-chan struct{},
 			return
 		}
 
+		var prog *goja.Program
+		hash := blake3.Sum256([]byte(req.Program))
+		progIfc, cachePresence := s.progCache.Get(hash)
+		if cachePresence {
+			prog = progIfc.(*goja.Program)
+		} else {
+			startTime := time.Now()
+			newProg, err := validator.ValidateAndCompileScript(req.Program)
+			if err != nil {
+				s.logger.Error("failed to compile script", zap.Error(err))
+				err = xmit(&protocol.Response{
+					Lane: req.Lane,
+					Body: &protocol.Response_Error{
+						Error: &protocol.ErrorResponse{
+							Description: err.Error(),
+						},
+					},
+				})
+				if err != nil {
+					s.logger.Error("failed to send response", zap.Error(err))
+				}
+				continue
+			}
+			endTime := time.Now()
+			prog = newProg
+			s.progCache.Add(hash, prog)
+			s.logger.Debug("compiled script", zap.Int("length", len(req.Program)), zap.Duration("duration", endTime.Sub(startTime)))
+		}
+
 		var data interface{}
 		if req.Data != "" {
 			if err := json.Unmarshal([]byte(req.Data), &data); err != nil {
@@ -271,7 +304,7 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, stop <-chan struct{},
 
 		startTime := time.Now()
 		s.vm.GlobalObject().Set("data", s.vm.ToValue(data))
-		_, err := s.vm.RunString(req.Program)
+		_, err := s.vm.RunProgram(prog)
 		endTime := time.Now()
 		s.logger.Debug("execution time", zap.Duration("duration", endTime.Sub(startTime)))
 
