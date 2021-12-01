@@ -6,6 +6,7 @@ import (
 	"github.com/dop251/goja"
 	js_ast "github.com/dop251/goja/ast"
 	"github.com/dop251/goja/parser"
+	"github.com/dop251/goja/token"
 	"github.com/pkg/errors"
 )
 
@@ -16,6 +17,8 @@ var ErrRegExpNotAllowed = errors.New("regular expression not allowed")
 var ErrSpreadNotAllowed = errors.New("spread operator not allowed")
 var ErrAssignmentNotAllowed = errors.New("assignment not allowed")
 var ErrObjectLiteralKeyNotAllowed = errors.New("object literal key not allowed")
+var ErrScriptTooLong = errors.New("script too long")
+var ErrPlusNotAllowed = errors.New("plus operator not allowed")
 
 var propFuncCallbackAllowlist = map[string]struct{}{
 	"map":       {},
@@ -196,6 +199,19 @@ func (v *validator) assertObjectLiteralKeys() {
 	}, nil)
 }
 
+func (v *validator) assertTrivialBinExpr() {
+	v.scanFromRootTyped([]reflect.Type{
+		reflect.TypeOf(js_ast.BinaryExpression{}),
+	}, nil, func(v interface{}, _sc scanContext) scanContext {
+		exp := v.(js_ast.BinaryExpression)
+		switch exp.Operator {
+		case token.PLUS:
+			panic(ErrPlusNotAllowed)
+		}
+		return _sc
+	}, nil)
+}
+
 func (v *validator) runValidation() (retErr error) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -208,10 +224,14 @@ func (v *validator) runValidation() (retErr error) {
 	v.assertNoSpread()
 	v.assertTrivialAssignments()
 	v.assertObjectLiteralKeys()
+	v.assertTrivialBinExpr()
 	return nil
 }
 
 func ValidateAndCompileScript(script string) (*goja.Program, error) {
+	if len(script) > 200 {
+		return nil, ErrScriptTooLong
+	}
 	ast, err := goja.Parse("<stdin>", script, parser.WithDisableSourceMaps)
 	if err != nil {
 		return nil, err

@@ -83,6 +83,23 @@ func TestRealWorld(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestBinExpr(t *testing.T) {
+	_, err := ValidateAndCompileScript("1 - 1")
+	assert.Nil(t, err)
+
+	_, err = ValidateAndCompileScript("1 - (-1)")
+	assert.Nil(t, err)
+
+	_, err = ValidateAndCompileScript("1 + 1")
+	assert.Equal(t, ErrPlusNotAllowed, err)
+
+	_, err = ValidateAndCompileScript("a += 1")
+	assert.Equal(t, ErrAssignmentNotAllowed, err)
+
+	_, err = ValidateAndCompileScript("a -= 1")
+	assert.Equal(t, ErrAssignmentNotAllowed, err)
+}
+
 func TestPatchVM(t *testing.T) {
 	vm := goja.New()
 	PatchVM(vm)
