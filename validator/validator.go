@@ -5,6 +5,7 @@ import (
 
 	"github.com/dop251/goja"
 	js_ast "github.com/dop251/goja/ast"
+	"github.com/dop251/goja/parser"
 	"github.com/pkg/errors"
 )
 
@@ -13,6 +14,17 @@ var ErrArrowFunctionNotAllowed = errors.New("arrow function not allowed in this 
 var ErrFunctionNotAllowed = errors.New("function not allowed")
 var ErrRegExpNotAllowed = errors.New("regular expression not allowed")
 var ErrSpreadNotAllowed = errors.New("spread operator not allowed")
+var ErrAssignmentNotAllowed = errors.New("assignment not allowed")
+var ErrObjectLiteralKeyNotAllowed = errors.New("object literal key not allowed")
+
+var propFuncCallbackAllowlist = map[string]struct{}{
+	"map":       {},
+	"filter":    {},
+	"reduce":    {},
+	"find":      {},
+	"findIndex": {},
+	"forEach":   {},
+}
 
 type validator struct {
 	ast *js_ast.Program
@@ -109,7 +121,7 @@ func (v *validator) assertTrivialFunctions() {
 			call := current.Interface().(js_ast.CallExpression)
 			callee := call.Callee
 			if exp, ok := callee.(*js_ast.DotExpression); ok {
-				if exp.Identifier.Name == "map" || exp.Identifier.Name == "filter" || exp.Identifier.Name == "reduce" || exp.Identifier.Name == "find" || exp.Identifier.Name == "findIndex" || exp.Identifier.Name == "forEach" {
+				if _, ok := propFuncCallbackAllowlist[exp.Identifier.Name.String()]; ok {
 					if len(call.ArgumentList) == 1 {
 						sc.isMapFilterReduceFind = true
 						return sc
@@ -152,6 +164,38 @@ func (v *validator) assertNoSpread() {
 	}, nil)
 }
 
+func (v *validator) assertTrivialAssignments() {
+	v.scanFromRootTyped([]reflect.Type{
+		reflect.TypeOf(js_ast.AssignExpression{}),
+	}, nil, func(v interface{}, _sc scanContext) scanContext {
+		exp := v.(js_ast.AssignExpression)
+		if id, ok := exp.Left.(*js_ast.Identifier); ok {
+			if id.Name == "output" {
+				return _sc
+			}
+		}
+		panic(ErrAssignmentNotAllowed)
+	}, nil)
+}
+
+func (v *validator) assertObjectLiteralKeys() {
+	v.scanFromRootTyped([]reflect.Type{
+		reflect.TypeOf(js_ast.ObjectLiteral{}),
+	}, nil, func(v interface{}, _sc scanContext) scanContext {
+		exp := v.(js_ast.ObjectLiteral)
+		for _, prop := range exp.Value {
+			if keyed, ok := prop.(*js_ast.PropertyShort); ok {
+				if _, ok := propFuncCallbackAllowlist[keyed.Name.Name.String()]; !ok {
+					continue
+				}
+			}
+
+			panic(ErrObjectLiteralKeyNotAllowed)
+		}
+		return _sc
+	}, nil)
+}
+
 func (v *validator) runValidation() (retErr error) {
 	defer func() {
 		if err := recover(); err != nil {
@@ -162,11 +206,13 @@ func (v *validator) runValidation() (retErr error) {
 	v.assertTrivialFunctions()
 	v.assertNoRegExp()
 	v.assertNoSpread()
+	v.assertTrivialAssignments()
+	v.assertObjectLiteralKeys()
 	return nil
 }
 
 func ValidateAndCompileScript(script string) (*goja.Program, error) {
-	ast, err := goja.Parse("<stdin>", script)
+	ast, err := goja.Parse("<stdin>", script, parser.WithDisableSourceMaps)
 	if err != nil {
 		return nil, err
 	}
@@ -176,5 +222,77 @@ func ValidateAndCompileScript(script string) (*goja.Program, error) {
 		return nil, err
 	}
 
+	body := &js_ast.BlockStatement{
+		List: ast.Body,
+	}
+	ast.Body = []js_ast.Statement{body}
+
 	return goja.CompileAST(ast, false)
+}
+
+func PatchVM(vm *goja.Runtime) {
+	vm.SetDisableDynamicCodeExecution(true)
+
+	_, err := vm.RunString(`
+{
+	delete RegExp;
+	delete Proxy;
+	delete globalThis;
+	delete Promise;
+	delete WeakSet;
+	delete WeakMap;
+	delete Map;
+	delete Set;
+	delete DataView;
+	const arrayProps = {
+		"length": true,
+		"map":       true,
+		"filter":    true,
+		"reduce":    true,
+		"find":      true,
+		"findIndex": true,
+		"forEach":   true,
+	};
+	for(const name of Object.getOwnPropertyNames(Array.prototype)) {
+		if(!arrayProps[name]) {
+			delete Array.prototype[name];
+		}
+	}
+	let clearProps = (name) => {
+		let x = this[name];
+		for(const k of Object.getOwnPropertyNames(x.prototype.__proto__)) {
+			delete x.prototype.__proto__[k];
+		}
+		for(const k of Object.getOwnPropertyNames(x.prototype)) {
+			delete x.prototype[k];
+		}
+		delete this[name];
+	}
+	clearProps("Int8Array");
+	clearProps("Uint8Array");
+	clearProps("Uint8ClampedArray");
+	clearProps("Int16Array");
+	clearProps("Uint16Array");
+	clearProps("Int32Array");
+	clearProps("Uint32Array");
+	clearProps("Float32Array");
+	clearProps("Float64Array");
+
+	clearProps = (name) => {
+		let x = this[name];
+		for(const k of Object.getOwnPropertyNames(x.prototype)) {
+			delete x.prototype[k];
+		}
+		delete this[name];
+	}
+	clearProps("ArrayBuffer");
+	clearProps("String");
+
+	Object.getOwnPropertyNames(Array).forEach(x => delete Array[x]);
+	Object.getOwnPropertyNames(Object).forEach(x => delete Object[x]);
+}
+	`)
+	if err != nil {
+		panic(err)
+	}
 }

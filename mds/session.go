@@ -10,6 +10,7 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 	"github.com/dop251/goja"
 	"github.com/losfair/blueboat-mds/protocol"
+	"github.com/losfair/blueboat-mds/validator"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )
@@ -165,7 +166,7 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 		vm:      goja.New(),
 	}
 
-	s.patchJsForLinearTimeAndMemory()
+	validator.PatchVM(s.vm)
 
 	s.vm.Set("createPrimaryTransaction", s.createPrimaryTransaction)
 	s.vm.Set("createReplicaTransaction", s.createReplicaTransaction)
@@ -174,13 +175,6 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 	s.vm.Set("stringToArrayBuffer", s.stringToArrayBuffer)
 	s.vm.Set("arrayBufferToString", s.arrayBufferToString)
 	return s
-}
-
-func (s *MdsSession) patchJsForLinearTimeAndMemory() {
-	// JS regular expressions are not guaranteed to be linear time.
-	s.vm.GlobalObject().Delete("RegExp")
-
-	// TODO: Arrays
 }
 
 func (s *MdsSession) jsBase64Encode(value goja.ArrayBuffer) string {
