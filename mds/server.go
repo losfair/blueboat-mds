@@ -23,7 +23,11 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var wsUpgrader = websocket.Upgrader{}
+var wsUpgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 type Mds struct {
 	logger            *zap.Logger

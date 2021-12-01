@@ -52,11 +52,11 @@ export class MdsClient {
         reject(new Error(`ws closed: ${e.reason}`));
       }
 
-      this.ws!.on('open', () => {
+      this.ws!.onopen = () => {
         winston.info('[MdsClient] connected');
         this.ws!.onmessage = async (event) => {
           try {
-            const challenge = mds.LoginChallenge.decode(normalizeWsData(event.data));
+            const challenge = mds.LoginChallenge.decode(await normalizeWsData(event.data));
             const sig = await ed25519.sign(challenge.challenge, this.secretKey);
             const login = mds.Login.encode({
               store: this.store,
@@ -68,7 +68,7 @@ export class MdsClient {
             this.ws!.onmessage = async (event) => {
               this.resetWsHandlers();
               try {
-                const loginResult = mds.LoginResponse.decode(normalizeWsData(event.data));
+                const loginResult = mds.LoginResponse.decode(await normalizeWsData(event.data));
                 if (loginResult.ok) {
                   resolve({
                     version: challenge.version,
@@ -85,7 +85,7 @@ export class MdsClient {
             reject(e);
           }
         };
-      });
+      };
     });
     this.serverInfo = await authProm;
     winston.info("[MdsClient] logged in");
@@ -115,8 +115,8 @@ export class MdsClient {
     }
   }
 
-  private onWsMessage(e: WebSocket.MessageEvent) {
-    const msg = mds.Response.decode(normalizeWsData(e.data));
+  private async onWsMessage(e: WebSocket.MessageEvent) {
+    const msg = mds.Response.decode(await normalizeWsData(e.data));
     this.laneCompletions.get(msg.lane)!.resolve(msg);
     this.laneCompletions.delete(msg.lane);
   }
@@ -184,9 +184,11 @@ export class MdsClient {
   }
 }
 
-function normalizeWsData(data: WebSocket.Data): Uint8Array {
+async function normalizeWsData(data: WebSocket.Data): Promise<Uint8Array> {
   if (data instanceof Uint8Array) {
     return data;
+  } else if(typeof Blob !== undefined && data instanceof Blob) {
+    return new Uint8Array(await data.arrayBuffer());
   } else {
     throw new Error('Invalid WebSocket data type');
   }
