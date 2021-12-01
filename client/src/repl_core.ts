@@ -78,6 +78,7 @@ export class ReplCore {
     this.client = this.clientGen!();
     await this.client.init();
     this.print(`Connected to MDS. Server version: ${this.client.getServerInfo().version}\n`);
+    this.print(`Type 'help' for help.\n`);
     while (true) {
       const pathDisplay = this.currentPath.join("/");
       const _cmd = shellParse(await this.question("MDS" + (pathDisplay ? " [" + pathDisplay + "]" : "") + "> "));
@@ -186,7 +187,7 @@ export class ReplCore {
           this.print("  cd <dir>\n");
           this.print("  get <path>\n");
           this.print("  get.utf8 <path>\n");
-          this.print("  set <path> <value>\n");
+          this.print("  set <path> <base64_encoded_value>\n");
           this.print("  set.utf8 <path> <value>\n");
           this.print("  delete <path>\n");
           this.print("  tree [dir]\n");
