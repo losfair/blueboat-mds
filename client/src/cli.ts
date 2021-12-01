@@ -1,6 +1,9 @@
 import { MdsClient } from "./client";
 import * as fs from "fs";
 import * as winston from "winston";
+import * as readline from 'readline';
+import { stdin as input, stdout as output } from 'process';
+import { ReplCore } from "./repl_core";
 
 const yargs = require("yargs");
 
@@ -31,6 +34,26 @@ function terminateWith<T>(p: Promise<T>) {
   });
 }
 
+async function interactive(server: string, store: string) {
+  const rl = readline.createInterface({
+    input,
+    output,
+  })
+
+  const repl = new ReplCore({
+    server,
+    store,
+    secret: process.env.MDS_SECRET,
+    print(s: string) {
+      rl.write(s);
+    },
+    question(s: string) {
+      return new Promise(resolve => rl.question(s, resolve));
+    },
+  });
+  await repl.init()
+}
+
 winston.configure({
   format: winston.format.combine(
     winston.format.timestamp(),
@@ -45,11 +68,6 @@ winston.configure({
 
 yargs.command('run <script>', 'run a transaction script', (yargs: any) => {
   return yargs
-    .option('store', {
-      type: 'string',
-      demandOption: true,
-      description: 'name of the store to use',
-    })
     .positional('script', {
       describe: 'path to transaction script',
       type: 'string',
@@ -58,10 +76,20 @@ yargs.command('run <script>', 'run a transaction script', (yargs: any) => {
   const script = fs.readFileSync(argv.script, "utf-8");
   terminateWith(run(argv.server, argv.store, script));
 })
+.command('repl', 'start repl', (yargs: any) => {
+  return yargs
+}, (argv: any) => {
+  terminateWith(interactive(argv.server, argv.store));
+})
 .option('server', {
   alias: "s",
   demandOption: true,
   type: 'string',
   description: 'Blueboat MDS server URL (ws://server:port)',
+})
+.option('store', {
+  type: 'string',
+  demandOption: true,
+  description: 'name of the store to use',
 })
 .parse()
