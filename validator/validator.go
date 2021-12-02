@@ -251,10 +251,28 @@ func ValidateAndCompileScript(script string) (*goja.Program, error) {
 }
 
 func PatchVM(vm *goja.Runtime) {
-	vm.SetDisableDynamicCodeExecution(true)
-
 	_, err := vm.RunString(`
 {
+	// https://github.com/dop251/goja/pull/342
+	(() => {
+    const thrower = () => {
+			throw new TypeError("dynamic code evaluation is disabled");
+    }
+    globalThis.eval = () => thrower();
+    Object.defineProperty(globalThis.eval, "name", {
+			value: "eval",
+    })
+    for (const f of ["Function", "GeneratorFunction", "AsyncFunction"]) {
+			if (f in globalThis) {
+				const stub = function() {
+						thrower();
+				}
+				stub.prototype = globalThis[f].prototype; // so that things like '(()=>{}) instanceof Function' work as expected
+				globalThis[f].prototype.constructor = stub;
+				globalThis[f] = stub;
+			}
+    }
+	})();
 	delete RegExp;
 	delete Proxy;
 	delete globalThis;

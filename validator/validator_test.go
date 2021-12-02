@@ -105,8 +105,11 @@ func TestPatchVM(t *testing.T) {
 	PatchVM(vm)
 
 	_, err := vm.RunString("eval('1 + 1')")
-	assert.EqualError(t, err, "TypeError: Dynamic code execution is disabled at <eval>:1:5(2)")
+	assert.EqualError(t, err, "TypeError: dynamic code evaluation is disabled at thrower (<eval>:6:10(4))")
 
 	_, err = vm.RunString("new Function('1 + 1')")
-	assert.EqualError(t, err, "TypeError: Dynamic code execution is disabled at <eval>:1:14(2)")
+	assert.EqualError(t, err, "TypeError: dynamic code evaluation is disabled at thrower (<eval>:6:10(4))")
+
+	_, err = vm.RunString("new (() => {}).constructor('1 + 1')")
+	assert.EqualError(t, err, "TypeError: dynamic code evaluation is disabled at thrower (<eval>:6:10(4))")
 }
