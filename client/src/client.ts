@@ -41,7 +41,8 @@ export class MdsClient {
 
   async init() {
     this.publicKey = await ed25519.getPublicKey(this.secretKey);
-    winston.info(`[MdsClient] public key: ${Base64.fromUint8Array(this.publicKey)}`)
+    
+    winston.info(`[MdsClient] public key: ${Buffer.from(this.publicKey).toString('hex')}`)
     this.ws = new WebSocket(this.endpoint);
 
     const authProm: Promise<MdsServerInfo> = new Promise((resolve, reject) => {

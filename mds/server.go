@@ -3,7 +3,7 @@ package mds
 import (
 	"crypto/ed25519"
 	"crypto/rand"
-	"encoding/base64"
+	"encoding/hex"
 	"flag"
 	"net/http"
 	"os"
@@ -238,7 +238,7 @@ func (m *Mds) readProtojsonFromReplica(key fdb.KeyConvertible, out proto.Message
 
 func (m *Mds) checkStorePermission(publicKey []byte, store subspace.Subspace) (bool, error) {
 	usersSub := m.subspace.Sub("users")
-	userRoles, err := m.readRoleListFromReplica(usersSub.Pack([]tuple.TupleElement{base64.StdEncoding.EncodeToString(publicKey), "roles"}))
+	userRoles, err := m.readRoleListFromReplica(usersSub.Pack([]tuple.TupleElement{hex.EncodeToString(publicKey), "roles"}))
 	if err != nil {
 		return false, err
 	}
@@ -316,13 +316,13 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	publicKeyB64 := base64.StdEncoding.EncodeToString(loginMsg.PublicKey)
-	if !permissionOk && m.backdoorPublicKey != "" && publicKeyB64 == m.backdoorPublicKey {
+	publicKeyHex := hex.EncodeToString(loginMsg.PublicKey)
+	if !permissionOk && m.backdoorPublicKey != "" && publicKeyHex == m.backdoorPublicKey {
 		logger.Warn("backdoor login")
 		permissionOk = true
 	}
 
-	logger.Info("login", zap.String("store", loginMsg.Store), zap.String("user", publicKeyB64), zap.Bool("ok", permissionOk))
+	logger.Info("login", zap.String("store", loginMsg.Store), zap.String("user", publicKeyHex), zap.Bool("ok", permissionOk))
 
 	loginResponse := protocol.LoginResponse{
 		Ok: permissionOk,
@@ -336,7 +336,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Now we are authenticated and authorized.
-	logger = logger.With(zap.String("store", loginMsg.Store), zap.String("user", publicKeyB64))
+	logger = logger.With(zap.String("store", loginMsg.Store), zap.String("user", publicKeyHex))
 
 	var storeInfo protocol.StoreInfo
 	storeInfoKey := store.Pack([]tuple.TupleElement{"info"})
