@@ -7,6 +7,7 @@ const remoteProg_Tree = "output = createReplicaTransaction().PrefixList(base64De
 const remoteProg_Get = "let value = createReplicaTransaction().Get(base64Decode(data.key)).Wait(); output = value === null ? null : base64Encode(value);"
 const remoteProg_Set = "let txn = createPrimaryTransaction(); txn.Set(base64Decode(data.key), base64Decode(data.value)); txn.Commit().Wait();";
 const remoteProg_Delete = "let txn = createPrimaryTransaction(); txn.Delete(base64Decode(data.key)); txn.Commit().Wait();";
+const remoteProg_PrefixDelete = "let txn = createPrimaryTransaction(); txn.PrefixDelete(base64Decode(data.key)); txn.Commit().Wait();";
 
 export interface ReplCoreArgs {
   server?: string;
@@ -102,7 +103,7 @@ export class ReplCore {
         case "get": {
           const objname = cmd[1];
           if (!objname) {
-            this.print("Usage: get <objname>\n");
+            this.print("Usage: get <path>\n");
             break;
           }
           const path = computePath(this.currentPath, objname);
@@ -114,7 +115,7 @@ export class ReplCore {
         case "get.utf8": {
           const objname = cmd[1];
           if (!objname) {
-            this.print("Usage: get.utf8 <objname>\n");
+            this.print("Usage: get.utf8 <path>\n");
             break;
           }
           const path = computePath(this.currentPath, objname);
@@ -127,7 +128,7 @@ export class ReplCore {
           const objname = cmd[1];
           const value = cmd[2];
           if (!objname || value === undefined) {
-            this.print("Usage: set <objname> <base64_encoded_value>\n");
+            this.print("Usage: set <path> <base64_encoded_value>\n");
             break;
           }
           const path = computePath(this.currentPath, objname);
@@ -140,7 +141,7 @@ export class ReplCore {
           const objname = cmd[1];
           let value = cmd[2];
           if (!objname || value === undefined) {
-            this.print("Usage: set.utf8 <objname> <value>\n");
+            this.print("Usage: set.utf8 <path> <value>\n");
             break;
           }
           const path = computePath(this.currentPath, objname);
@@ -152,12 +153,30 @@ export class ReplCore {
         case "delete": {
           const objname = cmd[1];
           if (!objname) {
-            this.print("Usage: delete <objname>\n");
+            this.print("Usage: delete <path>\n");
             break;
           }
           const path = computePath(this.currentPath, objname);
           const key = Base64.fromUint8Array(encodePath(path));
           const value = await this.client.run(remoteProg_Delete, { key });
+          this.print("OK\n");
+          break;
+        }
+        case "delete.recursive": {
+          const objname = cmd[1];
+          if (!objname) {
+            this.print("Usage: delete.recursive <path>\n");
+            break;
+          }
+          const path = computePath(this.currentPath, objname);
+          const more = await this.question(`Delete everything under /${path.join('/')}? (y/n) `);
+          if (more == "n") break;
+          if (more != "y") {
+            this.print("Invalid response\n");
+            break;
+          }
+          const key = Base64.fromUint8Array(encodePath(path));
+          await this.client.run(remoteProg_PrefixDelete, { key });
           this.print("OK\n");
           break;
         }
@@ -191,6 +210,7 @@ export class ReplCore {
           this.print("  set <path> <base64_encoded_value>\n");
           this.print("  set.utf8 <path> <value>\n");
           this.print("  delete <path>\n");
+          this.print("  delete.recursive <path>\n");
           this.print("  tree [dir]\n");
           this.print("  help\n");
           this.print("  exit\n");

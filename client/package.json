@@ -35,7 +35,7 @@
     "async-sema": "^3.1.1",
     "isomorphic-ws": "^4.0.1",
     "js-base64": "^3.7.2",
-    "local-echo": "github:wavesoft/local-echo",
+    "local-echo": "https://github.com/losfair/local-echo/archive/e09efbba529cfca6de38339697eaa22c49cc627b.tar.gz",
     "protobufjs": "^6.11.2",
     "shell-quote": "^1.7.3",
     "winston": "^3.3.3",
