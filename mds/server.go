@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"flag"
+	"io/fs"
 	"net/http"
 	"os"
 	"sync"
@@ -38,6 +39,7 @@ type Mds struct {
 	region            string
 	tempDir           string
 	clusters          atomic.Value // map[string]*MdsCluster
+	webData           fs.FS
 }
 
 type mdsReadTransactor struct {
@@ -53,7 +55,7 @@ func (t mdsReadTransactor) ReadTransact(cb func(fdb.ReadTransaction) (interface{
 	})
 }
 
-func NewMds(logger *zap.Logger) *Mds {
+func NewMds(logger *zap.Logger, webData fs.FS) *Mds {
 	tempDir, err := os.MkdirTemp("", "blueboat-mds-")
 	if err != nil {
 		logger.Panic("failed to create temp dir", zap.Error(err))
@@ -63,6 +65,7 @@ func NewMds(logger *zap.Logger) *Mds {
 	m := &Mds{
 		logger:  logger,
 		tempDir: tempDir,
+		webData: webData,
 	}
 	m.clusters.Store(make(map[string]*MdsCluster))
 	return m
@@ -139,6 +142,7 @@ func (m *Mds) Run() error {
 
 	m.logger.Info("starting ws listener")
 	http.HandleFunc("/mds", m.handle)
+	http.Handle("/", http.FileServer(http.FS(m.webData)))
 	return errors.Wrap(http.ListenAndServe(*listen, nil), "failed to start http server")
 }
 

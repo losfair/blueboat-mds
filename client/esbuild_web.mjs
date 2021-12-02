@@ -20,6 +20,8 @@ const out = await build({
   sourcemap: true,
   define: {
     "global": "window",
+    "setImmediate": "setTimeout",
+    "clearImmediate": "clearTimeout",
   }
 })
 

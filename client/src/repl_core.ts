@@ -69,7 +69,7 @@ export class ReplCore {
         break;
       } catch (e) {
         this.print(`\n${e}\n`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await this.question("Press enter to restart... ");
       }
     }
   }
@@ -169,7 +169,7 @@ export class ReplCore {
           while (true) {
             const limit = 20;
             const tree = <[string, string][]>await this.client.run(remoteProg_Tree, { prefix, limit, after });
-            this.print(tree.map(e => `${formatPath(Base64.toUint8Array(e[0]))}: ${e[1]}`).join("\n") + "\n");
+            this.print(tree.map(e => formatPath(Base64.toUint8Array(e[0]))).join("\n") + "\n");
             if (tree.length < limit) break;
 
             const more = await this.question("More? (y/n) ");

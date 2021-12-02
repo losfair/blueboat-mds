@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Blueboat MDS</title>
+  <link rel="stylesheet" href="https://cdn.staticfile.org/tailwindcss/2.2.17/tailwind.min.css"
+    integrity="sha512-yXagpXH0ulYCN8G/Wl7GK+XIpdnkh5fGHM5rOzG8Kb9Is5Ua8nZWRx5/RaKypcbSHc56mQe0GBG0HQIGTmd8bw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@4.15.0/css/xterm.css"
+    integrity="sha256-erpVt/NlHSUrbi+otuN3Uz8/NN/iVDvx7W40JQsbrHU=" crossorigin="anonymous">
+  <script type="module" src="app.min.js"></script>
+</head>
+
+<body class="bg-gray-50">
+  <div class="flex flex-col justify-center items-center h-screen">
+    <div class="flex flex-col space-y-5 items-center">
+      <div class="flex space-x-2">
+        <input type="password" name="secret-key" id="secret-key" placeholder="Ed25519 secret key (Base64)"
+          class="w-56 md:w-96 px-4 py-2 border border-gray-300 outline-none focus:border-gray-400" />
+        <button disabled id="connect-btn"
+          class="disabled:opacity-50 bg-black hover:bg-gray-900 text-white text-center py-2 px-4 rounded">
+          Connect
+        </button>
+      </div>
+      <div class="flex text-gray-400 text-xs h-32">
+        <pre id="public-key"></pre>
+      </div>
+    </div>
+  </div>
+  <div id="terminal"
+    style="display:none;margin:0;padding:5px;position:fixed;z-index:1;top:0;left:0;width:100%;height:100%;background-color:black">
+  </div>
+</body>
+
+</html>
