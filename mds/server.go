@@ -375,7 +375,33 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	stop := make(chan struct{})
 	defer close(stop)
 
+	kill := func() {
+		c.Close()
+	}
+
 	var xmitMu sync.Mutex
+
+	// Periodically send ping messages to the client.
+	go func() {
+		ticker := time.NewTicker(PingInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-stop:
+				logger.Debug("stopping ping task")
+				return
+			case <-ticker.C:
+				xmitMu.Lock()
+				err := c.WriteMessage(websocket.PingMessage, []byte{})
+				xmitMu.Unlock()
+				if err != nil {
+					logger.Error("failed to write ping", zap.Error(err))
+					kill()
+					return
+				}
+			}
+		}
+	}()
 
 	for i := 0; i < int(loginMsg.MuxWidth); i++ {
 		session := NewMdsSession(logger.With(zap.Int("lane", i)), cluster, storeSS)
@@ -383,9 +409,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 			xmitMu.Lock()
 			defer xmitMu.Unlock()
 			return writeProtoMsg(c, m)
-		}, func() {
-			c.Close()
-		})
+		}, kill)
 	}
 
 	for {
