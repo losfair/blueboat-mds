@@ -180,16 +180,33 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 	return s
 }
 
-func (s *MdsSession) jsBase64Encode(value goja.ArrayBuffer) string {
-	return base64.StdEncoding.EncodeToString(value.Bytes())
+func (s *MdsSession) jsBase64Encode(value goja.Value) goja.Value {
+	if value.SameAs(goja.Undefined()) {
+		return goja.Undefined()
+	} else if value.SameAs(goja.Null()) {
+		return goja.Null()
+	} else {
+		return s.vm.ToValue(base64.StdEncoding.EncodeToString(s.normalizeJsBytes(value)))
+	}
 }
 
-func (s *MdsSession) jsBase64Decode(value string) goja.ArrayBuffer {
-	b, err := base64.StdEncoding.DecodeString(value)
-	if err != nil {
-		panic(s.vm.ToValue(err.Error()))
+func (s *MdsSession) jsBase64Decode(value goja.Value) goja.Value {
+	if value.SameAs(goja.Undefined()) {
+		return goja.Undefined()
+	} else if value.SameAs(goja.Null()) {
+		return goja.Null()
+	} else {
+		strValue, ok := value.Export().(string)
+		if !ok {
+			panic(s.vm.ToValue("base64Decode: expected string"))
+		}
+
+		b, err := base64.StdEncoding.DecodeString(strValue)
+		if err != nil {
+			panic(s.vm.ToValue(err.Error()))
+		}
+		return s.vm.ToValue(s.vm.NewArrayBuffer(b))
 	}
-	return s.vm.NewArrayBuffer(b)
 }
 
 func (s *MdsSession) stringToArrayBuffer(value string) goja.ArrayBuffer {
