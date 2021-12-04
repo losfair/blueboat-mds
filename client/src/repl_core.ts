@@ -3,7 +3,7 @@ import { parse as shellParse } from "shell-quote";
 import { Base64 } from "js-base64";
 import { computePath, encodePath, formatPath } from "./pathutil";
 
-const remoteProg_Tree = "output = createReplicaTransaction().PrefixList(base64Decode(data.prefix), data.limit, base64Decode(data.after)).Collect().map(([k, v]) => [base64Encode(k), base64Encode(v)])";
+const remoteProg_Tree = "output = createReplicaTransaction().PrefixList(base64Decode(data.prefix), { limit: data.limit, cursor: base64Decode(data.cursor), reverse: data.reverse }).Collect().map(([k, v]) => [base64Encode(k), base64Encode(v)])";
 const remoteProg_Get = "let value = createReplicaTransaction().Get(base64Decode(data.key)).Wait(); output = value === null ? null : base64Encode(value);"
 const remoteProg_Set = "let txn = createPrimaryTransaction(); txn.Set(base64Decode(data.key), base64Decode(data.value)); txn.Commit().Wait();";
 const remoteProg_Delete = "let txn = createPrimaryTransaction(); txn.Delete(base64Decode(data.key)); txn.Commit().Wait();";
@@ -180,14 +180,16 @@ export class ReplCore {
           this.print("OK\n");
           break;
         }
-        case "tree": {
+        case "tree":
+        case "tree.reverse": {
+          const reverse = cmd[0] == "tree.reverse";
           const subdir = cmd[1]
           const path = subdir ? computePath(this.currentPath, subdir) : this.currentPath;
           const prefix = Base64.fromUint8Array(encodePath(path));
-          let after: string | undefined = undefined;
+          let cursor: string | undefined = undefined;
           while (true) {
             const limit = 20;
-            const tree = <[string, string][]>await this.client.run(remoteProg_Tree, { prefix, limit, after });
+            const tree = <[string, string][]>await this.client.run(remoteProg_Tree, { prefix, limit, cursor, reverse });
             this.print(tree.map(e => formatPath(Base64.toUint8Array(e[0]))).join("\n") + "\n");
             if (tree.length < limit) break;
 
@@ -198,7 +200,7 @@ export class ReplCore {
               break;
             }
 
-            after = tree[tree.length - 1][0];
+            cursor = tree[tree.length - 1][0];
           }
           break;
         }
@@ -212,6 +214,7 @@ export class ReplCore {
           this.print("  delete <path>\n");
           this.print("  delete.recursive <path>\n");
           this.print("  tree [dir]\n");
+          this.print("  tree.reverse [dir]\n");
           this.print("  help\n");
           this.print("  exit\n");
           break;
