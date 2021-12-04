@@ -229,7 +229,7 @@ func (v *validator) runValidation() (retErr error) {
 }
 
 func ValidateAndCompileScript(script string) (*goja.Program, error) {
-	if len(script) > 200 {
+	if len(script) > MaxScriptSize {
 		return nil, ErrScriptTooLong
 	}
 	ast, err := goja.Parse("<stdin>", script, parser.WithDisableSourceMaps)
