@@ -22,6 +22,7 @@ type MdsSession struct {
 	ss        subspace.Subspace
 	vm        *goja.Runtime
 	progCache *lru.Cache
+	ioSize    int
 }
 
 type jsPrimaryTxn struct {
@@ -43,6 +44,7 @@ type jsRangeResult struct {
 	s          *MdsSession
 	fullPrefix []byte
 	rr         fdb.RangeResult
+	wantValue  bool
 }
 
 type jsFutureNil struct {
@@ -52,41 +54,72 @@ type jsFutureNil struct {
 func jsTxnCore_Get(s *MdsSession, txn fdb.ReadTransaction, key goja.Value) jsFutureByteSlice {
 	rawKey := append([]byte(nil), s.ss.Bytes()...)
 	rawKey = append(rawKey, s.normalizeJsBytes(key)...)
+	s.checkAndIncIoSize(len(rawKey))
 	return jsFutureByteSlice{
 		s:      s,
 		future: txn.Get(fdb.Key(rawKey)),
 	}
 }
 
-func jsTxnCore_PrefixList(s *MdsSession, txn fdb.ReadTransaction, prefix goja.Value, limit uint32, after goja.Value) jsRangeResult {
-	if limit == 0 || limit > 1000 {
-		panic(s.vm.ToValue("PrefixList: invalid limit"))
-	}
+func jsTxnCore_PrefixList(s *MdsSession, txn fdb.ReadTransaction, prefix goja.Value, options *goja.Object) jsRangeResult {
 	prefixNormalized := s.normalizeJsBytes(prefix)
 	rawKey := append([]byte(nil), s.ss.Bytes()...)
 	rawKey = append(rawKey, prefixNormalized...)
+	s.checkAndIncIoSize(len(rawKey))
 	r, err := fdb.PrefixRange(fdb.Key(rawKey))
 	if err != nil {
 		panic(s.vm.ToValue(err.Error()))
 	}
 
-	if !after.SameAs(goja.Undefined()) {
-		afterNormalized := s.normalizeJsBytes(after)
+	reverseJsv := options.Get("reverse")
+	reverse := false
+	if reverseJsv != nil {
+		reverse = reverseJsv.ToBoolean()
+	}
 
-		startOverride := make([]byte, 0, len(s.ss.Bytes())+len(prefixNormalized)+len(afterNormalized)+1)
-		startOverride = append(startOverride, s.ss.Bytes()...)
-		startOverride = append(startOverride, prefixNormalized...)
-		startOverride = append(startOverride, afterNormalized...)
-		startOverride = append(startOverride, 0)
-		r.Begin = fdb.Key(startOverride)
+	wantValueJsv := options.Get("wantValue")
+	wantValue := false
+	if wantValueJsv != nil {
+		wantValue = wantValueJsv.ToBoolean()
+	}
+
+	limitJsv := options.Get("limit")
+	if limitJsv == nil {
+		panic(s.vm.ToValue("limit option is required"))
+	}
+	limit := limitJsv.ToInteger()
+
+	cursor := options.Get("cursor")
+
+	if limit <= 0 || limit > 1000 {
+		panic(s.vm.ToValue("PrefixList: invalid limit"))
+	}
+
+	if cursor != nil && !cursor.SameAs(goja.Undefined()) {
+		cursorNormalized := s.normalizeJsBytes(cursor)
+
+		keyOverride := make([]byte, 0, len(s.ss.Bytes())+len(prefixNormalized)+len(cursorNormalized)+1)
+		keyOverride = append(keyOverride, s.ss.Bytes()...)
+		keyOverride = append(keyOverride, prefixNormalized...)
+		keyOverride = append(keyOverride, cursorNormalized...)
+		s.checkAndIncIoSize(len(keyOverride))
+
+		if reverse {
+			r.End = fdb.Key(keyOverride)
+		} else {
+			keyOverride = append(keyOverride, 0)
+			r.Begin = fdb.Key(keyOverride)
+		}
 	}
 
 	return jsRangeResult{
 		s:          s,
 		fullPrefix: rawKey,
 		rr: txn.GetRange(r, fdb.RangeOptions{
-			Limit: int(limit),
+			Limit:   int(limit),
+			Reverse: reverse,
 		}),
+		wantValue: wantValue,
 	}
 }
 
@@ -94,8 +127,8 @@ func (t jsReplicaTxn) Get(key goja.Value) jsFutureByteSlice {
 	return jsTxnCore_Get(t.s, t.txn, key)
 }
 
-func (t jsReplicaTxn) PrefixList(prefix goja.Value, limit uint32, after goja.Value) jsRangeResult {
-	return jsTxnCore_PrefixList(t.s, t.txn, prefix, limit, after)
+func (t jsReplicaTxn) PrefixList(prefix goja.Value, options *goja.Object) jsRangeResult {
+	return jsTxnCore_PrefixList(t.s, t.txn, prefix, options)
 }
 
 func (f jsFutureByteSlice) Wait() goja.Value {
@@ -103,6 +136,7 @@ func (f jsFutureByteSlice) Wait() goja.Value {
 	if buf == nil {
 		return goja.Null()
 	} else {
+		f.s.checkAndIncIoSize(len(buf))
 		return f.s.vm.ToValue(f.s.vm.NewArrayBuffer(buf))
 	}
 }
@@ -118,23 +152,30 @@ func (t jsPrimaryTxn) Get(key goja.Value) jsFutureByteSlice {
 func (t jsPrimaryTxn) Set(key goja.Value, value goja.Value) goja.Value {
 	rawKey := append([]byte(nil), t.s.ss.Bytes()...)
 	rawKey = append(rawKey, t.s.normalizeJsBytes(key)...)
-	t.txn.Set(fdb.Key(rawKey), t.s.normalizeJsBytes(value))
+	t.s.checkAndIncIoSize(len(rawKey))
+
+	valueBytes := t.s.normalizeJsBytes(value)
+	t.s.checkAndIncIoSize(len(valueBytes))
+
+	t.txn.Set(fdb.Key(rawKey), valueBytes)
 	return goja.Undefined()
 }
 
 func (t jsPrimaryTxn) Delete(key goja.Value) {
 	rawKey := append([]byte(nil), t.s.ss.Bytes()...)
 	rawKey = append(rawKey, t.s.normalizeJsBytes(key)...)
+	t.s.checkAndIncIoSize(len(rawKey))
 	t.txn.Clear(fdb.Key(rawKey))
 }
 
-func (t jsPrimaryTxn) PrefixList(prefix goja.Value, limit uint32, after goja.Value) jsRangeResult {
-	return jsTxnCore_PrefixList(t.s, t.txn, prefix, limit, after)
+func (t jsPrimaryTxn) PrefixList(prefix goja.Value, options *goja.Object) jsRangeResult {
+	return jsTxnCore_PrefixList(t.s, t.txn, prefix, options)
 }
 
 func (t jsPrimaryTxn) PrefixDelete(prefix goja.Value) {
 	rawKey := append([]byte(nil), t.s.ss.Bytes()...)
 	rawKey = append(rawKey, t.s.normalizeJsBytes(prefix)...)
+	t.s.checkAndIncIoSize(len(rawKey))
 	r, err := fdb.PrefixRange(fdb.Key(rawKey))
 	if err != nil {
 		panic(t.s.vm.ToValue(err.Error()))
@@ -149,11 +190,21 @@ func (t jsPrimaryTxn) Commit() jsFutureNil {
 func (r jsRangeResult) Collect() []goja.Value {
 	it := r.rr.Iterator()
 	var out []goja.Value
+
+	r.s.checkAndIncIoSize(0)
+
 	for it.Advance() {
 		kv := it.MustGet()
+		r.s.checkAndIncIoSize(len(kv.Key))
+
+		value := goja.Null()
+		if r.wantValue {
+			r.s.checkAndIncIoSize(len(kv.Value))
+			value = r.s.vm.ToValue(r.s.vm.NewArrayBuffer(kv.Value))
+		}
 		pair := r.s.vm.ToValue([]goja.Value{
 			r.s.vm.ToValue(r.s.vm.NewArrayBuffer(kv.Key[len(r.fullPrefix):])),
-			r.s.vm.ToValue(r.s.vm.NewArrayBuffer(kv.Value)),
+			value,
 		})
 		out = append(out, pair)
 	}
@@ -178,6 +229,13 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 	s.vm.Set("stringToArrayBuffer", s.stringToArrayBuffer)
 	s.vm.Set("arrayBufferToString", s.arrayBufferToString)
 	return s
+}
+
+func (s *MdsSession) checkAndIncIoSize(size int) {
+	if s.ioSize+size > MaxTransactionScriptIoSize {
+		panic(s.vm.ToValue("I/O size limit exceeded"))
+	}
+	s.ioSize += size
 }
 
 func (s *MdsSession) jsBase64Encode(value goja.Value) goja.Value {
@@ -282,6 +340,7 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, stop <-chan struct{},
 			return
 		}
 
+		s.ioSize = 0
 		var prog *goja.Program
 		hash := blake3.Sum256([]byte(req.Program))
 		progIfc, cachePresence := s.progCache.Get(hash)
