@@ -193,6 +193,16 @@ func (v *validator) assertObjectLiteralKeys() {
 				}
 			}
 
+			if prop, ok := prop.(*js_ast.PropertyKeyed); ok && !prop.Computed {
+				if prop.Kind == js_ast.PropertyKindValue {
+					if id, ok := prop.Key.(*js_ast.StringLiteral); ok {
+						if _, ok := propFuncCallbackAllowlist[id.Literal]; !ok {
+							continue
+						}
+					}
+				}
+			}
+
 			panic(ErrObjectLiteralKeyNotAllowed)
 		}
 		return _sc

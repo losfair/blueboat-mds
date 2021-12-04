@@ -78,6 +78,17 @@ func TestRejectMalicious(t *testing.T) {
 	assert.Equal(t, ErrObjectLiteralKeyNotAllowed, err)
 }
 
+func TestObjectLiteralKey(t *testing.T) {
+	_, err := ValidateAndCompileScript("let o = { map: 1 }")
+	assert.Equal(t, ErrObjectLiteralKeyNotAllowed, err)
+	_, err = ValidateAndCompileScript("let o = { map }")
+	assert.Equal(t, ErrObjectLiteralKeyNotAllowed, err)
+	_, err = ValidateAndCompileScript("let o = { m: 1 }")
+	assert.Nil(t, err)
+	_, err = ValidateAndCompileScript("let o = { m }")
+	assert.Nil(t, err)
+}
+
 func TestRealWorld(t *testing.T) {
 	_, err := ValidateAndCompileScript("output = createReplicaTransaction().PrefixList(base64Decode(data.prefix), data.limit, data.after).Collect().map(([k, v]) => [base64Encode(k), base64Encode(v)])")
 	assert.Nil(t, err)
