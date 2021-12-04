@@ -95,7 +95,7 @@ func jsTxnCore_PrefixList(s *MdsSession, txn fdb.ReadTransaction, prefix goja.Va
 		panic(s.vm.ToValue("PrefixList: invalid limit"))
 	}
 
-	if cursor != nil && !cursor.SameAs(goja.Undefined()) {
+	if cursor != nil && !cursor.SameAs(goja.Undefined()) && !cursor.SameAs(goja.Null()) {
 		cursorNormalized := s.normalizeJsBytes(cursor)
 
 		keyOverride := make([]byte, 0, len(s.ss.Bytes())+len(prefixNormalized)+len(cursorNormalized)+1)
