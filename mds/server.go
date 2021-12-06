@@ -329,7 +329,8 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	logger.Info("login", zap.String("store", loginMsg.Store), zap.String("user", publicKeyHex), zap.Bool("ok", permissionOk))
 
 	loginResponse := protocol.LoginResponse{
-		Ok: permissionOk,
+		Ok:     permissionOk,
+		Region: m.region,
 	}
 	if err := writeProtoMsg(c, &loginResponse); err != nil {
 		logger.Error("failed to write login response", zap.Error(err))
