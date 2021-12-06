@@ -125,10 +125,8 @@ func (v *validator) assertTrivialFunctions() {
 			callee := call.Callee
 			if exp, ok := callee.(*js_ast.DotExpression); ok {
 				if _, ok := propFuncCallbackAllowlist[exp.Identifier.Name.String()]; ok {
-					if len(call.ArgumentList) == 1 {
-						sc.isMapFilterReduceFind = true
-						return sc
-					}
+					sc.isMapFilterReduceFind = true
+					return sc
 				}
 			}
 		}
