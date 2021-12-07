@@ -1,6 +1,7 @@
 package mds
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/hex"
@@ -191,7 +192,7 @@ func (m *Mds) openClustersOnce() error {
 			m.logger.Error("cluster key is not a string", zap.Binary("key", pair.Key))
 			continue
 		}
-		if old, ok := oldClusters[clusterName]; ok {
+		if old, ok := oldClusters[clusterName]; ok && bytes.Equal(old.RawConfig, pair.Value) {
 			clusters[clusterName] = old
 			continue
 		}
@@ -206,6 +207,7 @@ func (m *Mds) openClustersOnce() error {
 			m.logger.Error("failed to create MdsCluster", zap.String("name", clusterName), zap.Error(err))
 			continue
 		}
+		cluster.RawConfig = pair.Value
 		clusters[clusterName] = cluster
 		m.logger.Info("opened cluster", zap.String("name", clusterName))
 	}

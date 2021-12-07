@@ -21,6 +21,7 @@ type MdsCluster struct {
 	logger       *zap.Logger
 	primaryStore *fdb.Database
 	replicaStore *fdb.Database
+	RawConfig    []byte
 }
 
 func NewMdsCluster(logger *zap.Logger, tempDir, clusterName, region string, cluster *protocol.Cluster) (*MdsCluster, error) {
