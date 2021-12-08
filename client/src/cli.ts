@@ -16,9 +16,9 @@ interface WorkerStat {
 }
 
 async function benchOnce(workerIndex: number, client: MdsClient, iterationsPerWorker: number, stats: BenchStat) {
-  for(let i = 0; i < iterationsPerWorker; i++) {
-    let k1 = "\x02bench\x00\x02" + Math.floor(Math.random() * 1000) + "\x00";
-    let k2 = "\x02bench\x00\x02" + Math.floor(Math.random() * 1000) + "\x00";
+  for (let i = 0; i < iterationsPerWorker; i++) {
+    let k1 = "\x02bench\x00\x02" + Math.floor(Math.random() * 3000) + "\x00";
+    let k2 = "\x02bench\x00\x02" + Math.floor(Math.random() * 3000) + "\x00";
     let v = "" + Math.random();
 
     let startTime = Date.now();
@@ -35,14 +35,14 @@ async function benchOnce(workerIndex: number, client: MdsClient, iterationsPerWo
 
 async function bench(server: string, store: string) {
   const secret = process.env.MDS_SECRET;
-  if(!secret) {
+  if (!secret) {
     console.error("MDS_SECRET is not set");
     process.exit(1);
   }
 
   const numClients = 5;
   const numWorkers = 300;
-  const iterationsPerWorker = 100;
+  const iterationsPerWorker = 300;
   const clients = await Promise.all(Array(numClients).fill(0).map(async () => {
     const client = new MdsClient({
       endpoint: server,
@@ -64,12 +64,18 @@ async function bench(server: string, store: string) {
   const tasks: Promise<void>[] = Array(numWorkers).fill(0).map((_x, i) => benchOnce(i, clients[i % clients.length], iterationsPerWorker, stats));
   await Promise.all(tasks);
   const endTime = Date.now();
-  console.log(`${endTime - startTime}ms, ${numWorkers * iterationsPerWorker / ((endTime - startTime) / 1000)} ops/s`);
+
+  let allLats = stats.workerStats.flatMap(s => s.latency);
+  allLats.sort((a, b) => a - b);
+  let avgLat = allLats.reduce((a, b) => a + b, 0) / allLats.length;
+  let p50Lat = allLats[Math.floor(allLats.length * 0.5)];
+  let p99Lat = allLats[Math.floor(allLats.length * 0.99)];
+  console.log(`${endTime - startTime}ms, ${numWorkers * iterationsPerWorker / ((endTime - startTime) / 1000)} ops/s, p50 ${p50Lat}ms, p99 ${p99Lat}ms, avg ${avgLat}ms`);
 }
 
 async function run(server: string, store: string, program: string) {
   const secret = process.env.MDS_SECRET;
-  if(!secret) {
+  if (!secret) {
     console.error("MDS_SECRET is not set");
     process.exit(1);
   }
@@ -136,23 +142,23 @@ yargs.command('run <script>', 'run a transaction script', (yargs: any) => {
   const script = fs.readFileSync(argv.script, "utf-8");
   terminateWith(run(argv.server, argv.store, script));
 })
-.command('bench', 'benchmark', (yargs: any) => yargs, (argv: any) => {
-  terminateWith(bench(argv.server, argv.store));
-})
-.command('repl', 'start repl', (yargs: any) => {
-  return yargs
-}, (argv: any) => {
-  terminateWith(interactive(argv.server, argv.store));
-})
-.option('server', {
-  alias: "s",
-  demandOption: true,
-  type: 'string',
-  description: 'Blueboat MDS server URL (ws://server:port)',
-})
-.option('store', {
-  type: 'string',
-  demandOption: true,
-  description: 'name of the store to use',
-})
-.parse()
+  .command('bench', 'benchmark', (yargs: any) => yargs, (argv: any) => {
+    terminateWith(bench(argv.server, argv.store));
+  })
+  .command('repl', 'start repl', (yargs: any) => {
+    return yargs
+  }, (argv: any) => {
+    terminateWith(interactive(argv.server, argv.store));
+  })
+  .option('server', {
+    alias: "s",
+    demandOption: true,
+    type: 'string',
+    description: 'Blueboat MDS server URL (ws://server:port)',
+  })
+  .option('store', {
+    type: 'string',
+    demandOption: true,
+    description: 'name of the store to use',
+  })
+  .parse()
