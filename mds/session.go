@@ -48,7 +48,27 @@ type jsRangeResult struct {
 }
 
 type jsFutureNil struct {
+	s      *MdsSession
+	txn    fdb.Transaction
 	future fdb.FutureNil
+}
+
+type jsFdbError struct {
+	code      int
+	retryable bool
+}
+
+func (e jsFdbError) IsRetryable() bool {
+	return e.retryable
+}
+
+func (s *MdsSession) throwFdbError(txn *fdb.Transaction, err error) {
+	if x, ok := err.(fdb.Error); ok {
+		retryable := txn != nil && txn.OnError(x) == nil
+		panic(s.vm.ToValue(jsFdbError{code: x.Code, retryable: retryable}))
+	} else {
+		panic(s.vm.ToValue(err.Error()))
+	}
 }
 
 func jsTxnCore_Get(s *MdsSession, txn fdb.ReadTransaction, key goja.Value) jsFutureByteSlice {
@@ -132,7 +152,10 @@ func (t jsReplicaTxn) PrefixList(prefix goja.Value, options *goja.Object) jsRang
 }
 
 func (f jsFutureByteSlice) Wait() goja.Value {
-	buf := f.future.MustGet()
+	buf, err := f.future.Get()
+	if err != nil {
+		f.s.throwFdbError(nil, err)
+	}
 	if buf == nil {
 		return goja.Null()
 	} else {
@@ -142,7 +165,10 @@ func (f jsFutureByteSlice) Wait() goja.Value {
 }
 
 func (f jsFutureNil) Wait() {
-	f.future.MustGet()
+	err := f.future.Get()
+	if err != nil {
+		f.s.throwFdbError(&f.txn, err)
+	}
 }
 
 func (t jsPrimaryTxn) Get(key goja.Value) jsFutureByteSlice {
@@ -184,7 +210,7 @@ func (t jsPrimaryTxn) PrefixDelete(prefix goja.Value) {
 }
 
 func (t jsPrimaryTxn) Commit() jsFutureNil {
-	return jsFutureNil{future: t.txn.Commit()}
+	return jsFutureNil{s: t.s, txn: t.txn, future: t.txn.Commit()}
 }
 
 func (r jsRangeResult) Collect() []goja.Value {
@@ -194,7 +220,10 @@ func (r jsRangeResult) Collect() []goja.Value {
 	r.s.checkAndIncIoSize(0)
 
 	for it.Advance() {
-		kv := it.MustGet()
+		kv, err := it.Get()
+		if err != nil {
+			r.s.throwFdbError(nil, err)
+		}
 		r.s.checkAndIncIoSize(len(kv.Key))
 
 		value := goja.Null()
