@@ -3,6 +3,7 @@ package mds
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
@@ -56,6 +57,10 @@ type jsFutureNil struct {
 type jsFdbError struct {
 	code      int
 	retryable bool
+}
+
+func (e jsFdbError) String() string {
+	return fmt.Sprintf("foundationdb error %d (retryable: %t)", e.code, e.retryable)
 }
 
 func (e jsFdbError) IsRetryable() bool {
