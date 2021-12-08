@@ -211,6 +211,9 @@ export namespace mds {
 
         /** LoginResponse ok */
         ok?: (boolean|null);
+
+        /** LoginResponse region */
+        region?: (string|null);
     }
 
     /** Represents a LoginResponse. */
@@ -224,6 +227,9 @@ export namespace mds {
 
         /** LoginResponse ok. */
         public ok: boolean;
+
+        /** LoginResponse region. */
+        public region: string;
 
         /**
          * Creates a new LoginResponse instance using the specified properties.
@@ -604,6 +610,9 @@ export namespace mds {
 
         /** ErrorResponse description */
         description?: (string|null);
+
+        /** ErrorResponse retryable */
+        retryable?: (boolean|null);
     }
 
     /** Represents an ErrorResponse. */
@@ -617,6 +626,9 @@ export namespace mds {
 
         /** ErrorResponse description. */
         public description: string;
+
+        /** ErrorResponse retryable. */
+        public retryable: boolean;
 
         /**
          * Creates a new ErrorResponse instance using the specified properties.

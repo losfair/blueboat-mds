@@ -516,6 +516,7 @@ $root.mds = (function() {
          * @memberof mds
          * @interface ILoginResponse
          * @property {boolean|null} [ok] LoginResponse ok
+         * @property {string|null} [region] LoginResponse region
          */
 
         /**
@@ -540,6 +541,14 @@ $root.mds = (function() {
          * @instance
          */
         LoginResponse.prototype.ok = false;
+
+        /**
+         * LoginResponse region.
+         * @member {string} region
+         * @memberof mds.LoginResponse
+         * @instance
+         */
+        LoginResponse.prototype.region = "";
 
         /**
          * Creates a new LoginResponse instance using the specified properties.
@@ -567,6 +576,8 @@ $root.mds = (function() {
                 writer = $Writer.create();
             if (message.ok != null && Object.hasOwnProperty.call(message, "ok"))
                 writer.uint32(/* id 1, wireType 0 =*/8).bool(message.ok);
+            if (message.region != null && Object.hasOwnProperty.call(message, "region"))
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.region);
             return writer;
         };
 
@@ -603,6 +614,9 @@ $root.mds = (function() {
                 switch (tag >>> 3) {
                 case 1:
                     message.ok = reader.bool();
+                    break;
+                case 2:
+                    message.region = reader.string();
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -642,6 +656,9 @@ $root.mds = (function() {
             if (message.ok != null && message.hasOwnProperty("ok"))
                 if (typeof message.ok !== "boolean")
                     return "ok: boolean expected";
+            if (message.region != null && message.hasOwnProperty("region"))
+                if (!$util.isString(message.region))
+                    return "region: string expected";
             return null;
         };
 
@@ -659,6 +676,8 @@ $root.mds = (function() {
             var message = new $root.mds.LoginResponse();
             if (object.ok != null)
                 message.ok = Boolean(object.ok);
+            if (object.region != null)
+                message.region = String(object.region);
             return message;
         };
 
@@ -675,10 +694,14 @@ $root.mds = (function() {
             if (!options)
                 options = {};
             var object = {};
-            if (options.defaults)
+            if (options.defaults) {
                 object.ok = false;
+                object.region = "";
+            }
             if (message.ok != null && message.hasOwnProperty("ok"))
                 object.ok = message.ok;
+            if (message.region != null && message.hasOwnProperty("region"))
+                object.region = message.region;
             return object;
         };
 
@@ -1407,6 +1430,7 @@ $root.mds = (function() {
          * @memberof mds
          * @interface IErrorResponse
          * @property {string|null} [description] ErrorResponse description
+         * @property {boolean|null} [retryable] ErrorResponse retryable
          */
 
         /**
@@ -1431,6 +1455,14 @@ $root.mds = (function() {
          * @instance
          */
         ErrorResponse.prototype.description = "";
+
+        /**
+         * ErrorResponse retryable.
+         * @member {boolean} retryable
+         * @memberof mds.ErrorResponse
+         * @instance
+         */
+        ErrorResponse.prototype.retryable = false;
 
         /**
          * Creates a new ErrorResponse instance using the specified properties.
@@ -1458,6 +1490,8 @@ $root.mds = (function() {
                 writer = $Writer.create();
             if (message.description != null && Object.hasOwnProperty.call(message, "description"))
                 writer.uint32(/* id 1, wireType 2 =*/10).string(message.description);
+            if (message.retryable != null && Object.hasOwnProperty.call(message, "retryable"))
+                writer.uint32(/* id 2, wireType 0 =*/16).bool(message.retryable);
             return writer;
         };
 
@@ -1494,6 +1528,9 @@ $root.mds = (function() {
                 switch (tag >>> 3) {
                 case 1:
                     message.description = reader.string();
+                    break;
+                case 2:
+                    message.retryable = reader.bool();
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -1533,6 +1570,9 @@ $root.mds = (function() {
             if (message.description != null && message.hasOwnProperty("description"))
                 if (!$util.isString(message.description))
                     return "description: string expected";
+            if (message.retryable != null && message.hasOwnProperty("retryable"))
+                if (typeof message.retryable !== "boolean")
+                    return "retryable: boolean expected";
             return null;
         };
 
@@ -1550,6 +1590,8 @@ $root.mds = (function() {
             var message = new $root.mds.ErrorResponse();
             if (object.description != null)
                 message.description = String(object.description);
+            if (object.retryable != null)
+                message.retryable = Boolean(object.retryable);
             return message;
         };
 
@@ -1566,10 +1608,14 @@ $root.mds = (function() {
             if (!options)
                 options = {};
             var object = {};
-            if (options.defaults)
+            if (options.defaults) {
                 object.description = "";
+                object.retryable = false;
+            }
             if (message.description != null && message.hasOwnProperty("description"))
                 object.description = message.description;
+            if (message.retryable != null && message.hasOwnProperty("retryable"))
+                object.retryable = message.retryable;
             return object;
         };
 

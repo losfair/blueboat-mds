@@ -162,7 +162,7 @@ export class MdsClient {
     });
   }
 
-  async run(program: string, data?: unknown): Promise<unknown> {
+  async run(program: string, data?: unknown, retryable: boolean = false): Promise<unknown> {
     const lane = await this.grabLane();
     try {
       const reqI: mds.IRequest = {
@@ -173,12 +173,22 @@ export class MdsClient {
         reqI.data = JSON.stringify(data);
       }
       const req = mds.Request.encode(reqI);
-      this.ws!.send(req.finish());
-      const res = await this.waitResponse(lane);
-      if (res.error) {
-        throw new Error("remote error: " + res.error.description);
+      const reqBytes = req.finish();
+
+      for(let i = 0; i < 5; i++) {
+        this.ws!.send(reqBytes);
+        const res = await this.waitResponse(lane);
+        if (res.error) {
+          if(retryable && res.error.retryable) {
+            winston.warn(`retrying task`, { attempt: i, error: res.error.description || "" });
+            continue;
+          } else {
+            throw new Error("remote error: " + res.error.description);
+          }
+        }
+        return JSON.parse(res.output!);
       }
-      return JSON.parse(res.output!);
+      throw new Error("failed to complete task after retries");
     } finally {
       this.releaseLane(lane);
     }
