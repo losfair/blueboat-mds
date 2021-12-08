@@ -70,7 +70,9 @@ async function bench(server: string, store: string) {
   let avgLat = allLats.reduce((a, b) => a + b, 0) / allLats.length;
   let p50Lat = allLats[Math.floor(allLats.length * 0.5)];
   let p99Lat = allLats[Math.floor(allLats.length * 0.99)];
-  console.log(`${endTime - startTime}ms, ${numWorkers * iterationsPerWorker / ((endTime - startTime) / 1000)} ops/s, p50 ${p50Lat}ms, p99 ${p99Lat}ms, avg ${avgLat}ms`);
+  let minLat = allLats[0];
+  let maxLat = allLats[allLats.length - 1];
+  console.log(`${endTime - startTime}ms, ${numWorkers * iterationsPerWorker / ((endTime - startTime) / 1000)} ops/s, p50 ${p50Lat}ms, p99 ${p99Lat}ms, avg ${avgLat}ms, min ${minLat}ms, max ${maxLat}ms`);
 }
 
 async function run(server: string, store: string, program: string) {
