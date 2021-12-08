@@ -417,12 +417,24 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, stop <-chan struct{},
 		s.vm.GlobalObject().Delete("data")
 
 		if err != nil {
-			s.logger.Error("failed to run program", zap.Error(err))
+			retryable := false
+			if jserr, ok := err.(*goja.Exception); ok {
+				if val := jserr.Value(); val != nil {
+					exp := val.Export()
+					if err, ok := exp.(jsFdbError); ok {
+						if err.retryable {
+							retryable = true
+						}
+					}
+				}
+			}
+			s.logger.Error("failed to run program", zap.Error(err), zap.Bool("retryable", retryable))
 			err = xmit(&protocol.Response{
 				Lane: req.Lane,
 				Body: &protocol.Response_Error{
 					Error: &protocol.ErrorResponse{
 						Description: err.Error(),
+						Retryable:   retryable,
 					},
 				},
 			})
