@@ -64,7 +64,7 @@ func (e jsFdbError) IsRetryable() bool {
 
 func (s *MdsSession) throwFdbError(txn *fdb.Transaction, err error) {
 	if x, ok := err.(fdb.Error); ok {
-		retryable := txn != nil && txn.OnError(x) == nil
+		retryable := txn != nil && txn.OnError(x).Get() == nil
 		panic(s.vm.ToValue(jsFdbError{code: x.Code, retryable: retryable}))
 	} else {
 		panic(s.vm.ToValue(err.Error()))
