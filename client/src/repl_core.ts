@@ -3,11 +3,22 @@ import { parse as shellParse } from "shell-quote";
 import { Base64 } from "js-base64";
 import { computePath, encodePath, formatPath } from "./pathutil";
 
-const remoteProg_Tree = "output = createReplicaTransaction().PrefixList(base64Decode(data.prefix), { limit: data.limit, cursor: base64Decode(data.cursor), reverse: data.reverse }).Collect().map(([k, v]) => [base64Encode(k), base64Encode(v)])";
+const remoteProg_Tree = "output = (data.primary ? createPrimaryTransaction() : createReplicaTransaction()).PrefixList(base64Decode(data.prefix), { limit: data.limit, cursor: base64Decode(data.cursor), reverse: data.reverse }).Collect().map(([k, v]) => [base64Encode(k), base64Encode(v)])";
 const remoteProg_Get = "let value = createReplicaTransaction().Get(base64Decode(data.key)).Wait(); output = value === null ? null : base64Encode(value);"
 const remoteProg_Set = "let txn = createPrimaryTransaction(); txn.Set(base64Decode(data.key), base64Decode(data.value)); txn.Commit().Wait();";
 const remoteProg_Delete = "let txn = createPrimaryTransaction(); txn.Delete(base64Decode(data.key)); txn.Commit().Wait();";
 const remoteProg_PrefixDelete = "let txn = createPrimaryTransaction(); txn.PrefixDelete(base64Decode(data.key)); txn.Commit().Wait();";
+// Here we used a bug in MDS where string interpolation is not checked!
+const remoteProg_Move = `
+let txn = createPrimaryTransaction();
+data.items.map(x => [x, txn.Get(base64Decode(x.k1))]).forEach(([x, _v]) => {
+let v = _v.Wait();
+if(v === null) throw new Error(\`missing value: \${x.k1}\`);
+txn.Set(base64Decode(x.k2), v);
+txn.Delete(base64Decode(x.k1));
+});
+txn.Commit().Wait();
+`;
 
 export interface ReplCoreArgs {
   server?: string;
@@ -60,7 +71,7 @@ export class ReplCore {
     this.clientGen = () => new MdsClient({
       endpoint: server,
       secretKey: secret,
-      numLanes: 1,
+      numLanes: 4,
       store,
     });
 
@@ -69,6 +80,7 @@ export class ReplCore {
         await this.runUntilException();
         break;
       } catch (e) {
+        console.error(e);
         this.print(`\n${e}\n`);
         await this.question("Press enter to restart... ");
       }
@@ -185,22 +197,12 @@ export class ReplCore {
           const reverse = cmd[0] == "tree.reverse";
           const subdir = cmd[1]
           const path = subdir ? computePath(this.currentPath, subdir) : this.currentPath;
-          const prefix = Base64.fromUint8Array(encodePath(path));
-          let cursor: string | undefined = undefined;
-          while (true) {
-            const limit = 50;
-            const tree = <[string, string][]>await this.client.run(remoteProg_Tree, { prefix, limit, cursor, reverse });
-            this.print(tree.map(e => formatPath(Base64.toUint8Array(e[0]))).join("\n") + "\n");
-            if (tree.length < limit) break;
-
-            const more = await this.question("More? (y/n) ");
-            if (more == "n") break;
-            if (more != "y") {
-              this.print("Invalid response\n");
-              break;
-            }
-
-            cursor = tree[tree.length - 1][0];
+          for await (const batch of this.runTree(encodePath(path), {
+            reverse: false,
+            primary: false,
+            batchSize: 50,
+          }, () => this.questionMore())) {
+            for (const seg of batch) this.print(formatPath(seg) + "\n");
           }
           break;
         }
@@ -238,6 +240,50 @@ export class ReplCore {
           }
           break;
         }
+        case "change-prefix.nonatomically": {
+          const oldPrefix = cmd[1];
+          const newPrefix = cmd[2];
+          if (!oldPrefix || !newPrefix) {
+            this.print("Usage: change-prefix.nonatomically <old_prefix> <new_prefix>\n");
+            break;
+          }
+          const oldPath = computePath(this.currentPath, oldPrefix);
+          const oldPathEncoded = encodePath(oldPath);
+          const newPath = computePath(this.currentPath, newPrefix);
+          const newPathEncoded = encodePath(newPath);
+
+          const prom: Promise<unknown>[] = [];
+
+          for await (const batch of this.runTree(encodePath(oldPath), {
+            reverse: false,
+            primary: true,
+            batchSize: 100,
+          }, () => true)) {
+            const items: { k1: string, k2: string }[] = [];
+            for (const seg of batch) {
+              const oldFullPath = new Uint8Array(oldPathEncoded.length + seg.length);
+              oldFullPath.set(oldPathEncoded);
+              oldFullPath.set(seg, oldPathEncoded.length);
+
+              const newFullPath = new Uint8Array(newPathEncoded.length + seg.length);
+              newFullPath.set(newPathEncoded);
+              newFullPath.set(seg, newPathEncoded.length);
+              items.push({ k1: Base64.fromUint8Array(oldFullPath), k2: Base64.fromUint8Array(newFullPath) });
+            }
+
+            prom.push(this.client.run(
+              remoteProg_Move,
+              {
+                items,
+              },
+            ));
+            this.print(`Submitted ${items.length} entries...\n`);
+          }
+          this.print("Waiting for completion...\n");
+          await Promise.all(prom);
+          this.print("OK\n");
+          break;
+        }
         case "help": {
           this.print("Available commands:\n");
           this.print("  cd <dir>\n");
@@ -250,6 +296,7 @@ export class ReplCore {
           this.print("  ls [dir]\n");
           this.print("  tree [dir]\n");
           this.print("  tree.reverse [dir]\n");
+          this.print("  change-prefix.nonatomically <old_prefix> <new_prefix>\n");
           this.print("  help\n");
           this.print("  exit\n");
           break;
@@ -261,6 +308,28 @@ export class ReplCore {
           this.print("Unknown command\n");
         }
       }
+    }
+  }
+
+  async questionMore(): Promise<boolean> {
+    const more = await this.question("More? (y/n) ");
+    if (more == "n") return false;
+    if (more != "y") {
+      this.print("Invalid response\n");
+      return false;
+    }
+    return true;
+  }
+
+  async* runTree(encodedPath: Uint8Array, opts: { batchSize: number, primary: boolean, reverse: boolean }, questionMore: () => boolean | Promise<boolean>): AsyncGenerator<Uint8Array[], void, void> {
+    const prefix = Base64.fromUint8Array(encodedPath);
+    let cursor: string | undefined = undefined;
+    while (true) {
+      const tree = <[string, string][]>await this.client!.run(remoteProg_Tree, { primary: opts.primary, prefix, limit: opts.batchSize, cursor, reverse: opts.reverse });
+      yield tree.map(([k, _v]) => Base64.toUint8Array(k));
+      if (tree.length < opts.batchSize) break;
+      if (!await questionMore()) break;
+      cursor = tree[tree.length - 1][0];
     }
   }
 }
