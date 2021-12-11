@@ -257,7 +257,7 @@ export class ReplCore {
           for await (const batch of this.runTree(encodePath(oldPath), {
             reverse: false,
             primary: true,
-            batchSize: 100,
+            batchSize: 80, // Stay within FDB transaction size limit
           }, () => true)) {
             const items: { k1: string, k2: string }[] = [];
             for (const seg of batch) {
@@ -277,7 +277,7 @@ export class ReplCore {
                 items,
               },
             ));
-            this.print(`Submitted ${items.length} entries...\n`);
+            this.print(`.`);
           }
           this.print("Waiting for completion...\n");
           await Promise.all(prom);
