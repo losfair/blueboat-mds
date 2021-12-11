@@ -188,7 +188,7 @@ export class ReplCore {
           const prefix = Base64.fromUint8Array(encodePath(path));
           let cursor: string | undefined = undefined;
           while (true) {
-            const limit = 20;
+            const limit = 50;
             const tree = <[string, string][]>await this.client.run(remoteProg_Tree, { prefix, limit, cursor, reverse });
             this.print(tree.map(e => formatPath(Base64.toUint8Array(e[0]))).join("\n") + "\n");
             if (tree.length < limit) break;
@@ -204,6 +204,40 @@ export class ReplCore {
           }
           break;
         }
+        case "ls": {
+          const subdir = cmd[1]
+          const path = subdir ? computePath(this.currentPath, subdir) : this.currentPath;
+          const prefix = Base64.fromUint8Array(encodePath(path));
+          const firstSeg = (x: Uint8Array) => x.slice(0, x.indexOf(0) + 1);
+
+          let cursor: string | undefined = undefined;
+          let outputCount = 0;
+          const pageSize = 50;
+          while (true) {
+            const batchSize = 200;
+            const tree = <[string, string][]>await this.client.run(remoteProg_Tree, { prefix, limit: batchSize, cursor, reverse: false });
+            let uniquePrefixes = tree.map(([k, v]) => firstSeg(Base64.toUint8Array(k))).filter(x => x.length)
+              .filter((x, i, a) => i == 0 || !uint8arrayEquals(x, a[i - 1]));
+            this.print(uniquePrefixes.map(e => formatPath(e)).join("\n") + "\n");
+            if (uniquePrefixes.length == 0) break;
+
+            outputCount += uniquePrefixes.length;
+            if (outputCount >= pageSize) {
+              const more = await this.question("More? (y/n) ");
+              if (more == "n") break;
+              if (more != "y") {
+                this.print("Invalid response\n");
+                break;
+              }
+              outputCount = 0;
+            }
+
+            const nextCursor = uniquePrefixes[uniquePrefixes.length - 1];
+            nextCursor[nextCursor.length - 1] = 1;
+            cursor = Base64.fromUint8Array(nextCursor);
+          }
+          break;
+        }
         case "help": {
           this.print("Available commands:\n");
           this.print("  cd <dir>\n");
@@ -213,6 +247,7 @@ export class ReplCore {
           this.print("  set.utf8 <path> <value>\n");
           this.print("  delete <path>\n");
           this.print("  delete.recursive <path>\n");
+          this.print("  ls [dir]\n");
           this.print("  tree [dir]\n");
           this.print("  tree.reverse [dir]\n");
           this.print("  help\n");
@@ -228,4 +263,12 @@ export class ReplCore {
       }
     }
   }
+}
+
+function uint8arrayEquals(a: Uint8Array, b: Uint8Array) {
+  if (a.length != b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
