@@ -198,7 +198,7 @@ export class ReplCore {
           const subdir = cmd[1]
           const path = subdir ? computePath(this.currentPath, subdir) : this.currentPath;
           for await (const batch of this.runTree(encodePath(path), {
-            reverse: false,
+            reverse,
             primary: false,
             batchSize: 50,
           }, () => this.questionMore())) {
