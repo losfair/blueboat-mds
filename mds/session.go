@@ -9,9 +9,10 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/subspace"
 	"github.com/dop251/goja"
+	js_ast "github.com/dop251/goja/ast"
+	"github.com/dop251/goja/parser"
 	"github.com/golang/groupcache/lru"
 	"github.com/losfair/blueboat-mds/protocol"
-	"github.com/losfair/blueboat-mds/validator"
 	"github.com/zeebo/blake3"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -254,8 +255,6 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 		progCache: lru.New(16),
 	}
 
-	validator.PatchVM(s.vm)
-
 	s.vm.Set("createPrimaryTransaction", s.createPrimaryTransaction)
 	s.vm.Set("createReplicaTransaction", s.createReplicaTransaction)
 	s.vm.Set("base64Encode", s.jsBase64Encode)
@@ -266,9 +265,6 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 }
 
 func (s *MdsSession) checkAndIncIoSize(size int) {
-	if s.ioSize+size > MaxTransactionScriptIoSize {
-		panic(s.vm.ToValue("I/O size limit exceeded"))
-	}
 	s.ioSize += size
 }
 
@@ -382,7 +378,7 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, stop <-chan struct{},
 			prog = progIfc.(*goja.Program)
 		} else {
 			startTime := time.Now()
-			newProg, err := validator.ValidateAndCompileScript(req.Program)
+			newProg, err := CompileScript(req.Program)
 			if err != nil {
 				s.logger.Error("failed to compile script", zap.Error(err))
 				err = xmit(&protocol.Response{
@@ -473,4 +469,18 @@ func (s *MdsSession) Run(ingress <-chan *protocol.Request, stop <-chan struct{},
 			s.logger.Error("failed to send response", zap.Error(err))
 		}
 	}
+}
+
+func CompileScript(script string) (*goja.Program, error) {
+	ast, err := goja.Parse("<stdin>", script, parser.WithDisableSourceMaps)
+	if err != nil {
+		return nil, err
+	}
+
+	body := &js_ast.BlockStatement{
+		List: ast.Body,
+	}
+	ast.Body = []js_ast.Statement{body}
+
+	return goja.CompileAST(ast, false)
 }

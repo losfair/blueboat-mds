@@ -277,7 +277,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 
-	c.SetReadLimit(MaxWebSocketIncomingMessageSize)
+	c.SetReadLimit(MaxPreAuthWebSocketIncomingMessageSize)
 
 	loginChallenge := protocol.LoginChallenge{
 		Challenge: make([]byte, 32),
@@ -346,6 +346,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 
 	// Now we are authenticated and authorized.
 	logger = logger.With(zap.String("store", loginMsg.Store), zap.String("user", publicKeyHex))
+	c.SetReadLimit(MaxWebSocketIncomingMessageSize)
 
 	var storeInfo protocol.StoreInfo
 	storeInfoKey := store.Pack([]tuple.TupleElement{"info"})
