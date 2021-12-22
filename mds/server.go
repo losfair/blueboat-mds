@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -366,7 +367,11 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	storeSS := subspace.Sub(storeInfo.Subspace)
+	subspaceSegs := strings.Split(storeInfo.Subspace, "/")
+	storeSS := subspace.Sub(subspaceSegs[0])
+	for i := 1; i < len(subspaceSegs); i++ {
+		storeSS = storeSS.Sub(subspaceSegs[i])
+	}
 
 	channels := make([]chan *protocol.Request, 0, int(loginMsg.MuxWidth))
 	for i := uint32(0); i < loginMsg.MuxWidth; i++ {
