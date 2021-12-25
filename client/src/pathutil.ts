@@ -28,7 +28,7 @@ export function formatPath(path: Uint8Array): string {
   }
 }
 
-function tryPrettyPrintPath(path: Uint8Array): string | undefined {
+export function tryPrettyPrintPath(path: Uint8Array): string | undefined {
   let idx = 0;
   let segs: string[] = [];
   while (idx < path.length) {

@@ -41,7 +41,7 @@ export class MdsClient {
 
   async init() {
     this.publicKey = await ed25519.getPublicKey(this.secretKey);
-    
+
     winston.info(`[MdsClient] public key: ${Buffer.from(this.publicKey).toString('hex')}`)
     this.ws = new WebSocket(this.endpoint);
 
@@ -75,7 +75,7 @@ export class MdsClient {
                     version: challenge.version,
                   });
                 } else {
-                  reject(new Error('Login failed'));
+                  reject(new Error('Login failed: ' + loginResult.error));
                 }
               } catch (e) {
                 reject(e);
@@ -100,7 +100,7 @@ export class MdsClient {
   }
 
   getServerInfo(): MdsServerInfo {
-    if(!this.serverInfo) throw new Error("not initialized");
+    if (!this.serverInfo) throw new Error("not initialized");
     return this.serverInfo;
   }
 
@@ -169,17 +169,17 @@ export class MdsClient {
         lane,
         program,
       };
-      if(data !== undefined) {
+      if (data !== undefined) {
         reqI.data = JSON.stringify(data);
       }
       const req = mds.Request.encode(reqI);
       const reqBytes = req.finish();
 
-      for(let i = 0; i < 5; i++) {
+      for (let i = 0; i < 5; i++) {
         this.ws!.send(reqBytes);
         const res = await this.waitResponse(lane);
         if (res.error) {
-          if(retryable && res.error.retryable) {
+          if (retryable && res.error.retryable) {
             winston.warn(`retrying task`, { attempt: i, error: res.error.description || "" });
             continue;
           } else {
@@ -198,7 +198,7 @@ export class MdsClient {
 async function normalizeWsData(data: WebSocket.Data): Promise<Uint8Array> {
   if (data instanceof Uint8Array) {
     return data;
-  } else if(typeof Blob !== undefined && data instanceof Blob) {
+  } else if (typeof Blob !== undefined && data instanceof Blob) {
     return new Uint8Array(await data.arrayBuffer());
   } else {
     throw new Error('Invalid WebSocket data type');

@@ -517,6 +517,7 @@ $root.mds = (function() {
          * @interface ILoginResponse
          * @property {boolean|null} [ok] LoginResponse ok
          * @property {string|null} [region] LoginResponse region
+         * @property {string|null} [error] LoginResponse error
          */
 
         /**
@@ -551,6 +552,14 @@ $root.mds = (function() {
         LoginResponse.prototype.region = "";
 
         /**
+         * LoginResponse error.
+         * @member {string} error
+         * @memberof mds.LoginResponse
+         * @instance
+         */
+        LoginResponse.prototype.error = "";
+
+        /**
          * Creates a new LoginResponse instance using the specified properties.
          * @function create
          * @memberof mds.LoginResponse
@@ -578,6 +587,8 @@ $root.mds = (function() {
                 writer.uint32(/* id 1, wireType 0 =*/8).bool(message.ok);
             if (message.region != null && Object.hasOwnProperty.call(message, "region"))
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.region);
+            if (message.error != null && Object.hasOwnProperty.call(message, "error"))
+                writer.uint32(/* id 3, wireType 2 =*/26).string(message.error);
             return writer;
         };
 
@@ -617,6 +628,9 @@ $root.mds = (function() {
                     break;
                 case 2:
                     message.region = reader.string();
+                    break;
+                case 3:
+                    message.error = reader.string();
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -659,6 +673,9 @@ $root.mds = (function() {
             if (message.region != null && message.hasOwnProperty("region"))
                 if (!$util.isString(message.region))
                     return "region: string expected";
+            if (message.error != null && message.hasOwnProperty("error"))
+                if (!$util.isString(message.error))
+                    return "error: string expected";
             return null;
         };
 
@@ -678,6 +695,8 @@ $root.mds = (function() {
                 message.ok = Boolean(object.ok);
             if (object.region != null)
                 message.region = String(object.region);
+            if (object.error != null)
+                message.error = String(object.error);
             return message;
         };
 
@@ -697,11 +716,14 @@ $root.mds = (function() {
             if (options.defaults) {
                 object.ok = false;
                 object.region = "";
+                object.error = "";
             }
             if (message.ok != null && message.hasOwnProperty("ok"))
                 object.ok = message.ok;
             if (message.region != null && message.hasOwnProperty("region"))
                 object.region = message.region;
+            if (message.error != null && message.hasOwnProperty("error"))
+                object.error = message.error;
             return object;
         };
 

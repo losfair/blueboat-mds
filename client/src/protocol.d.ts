@@ -214,6 +214,9 @@ export namespace mds {
 
         /** LoginResponse region */
         region?: (string|null);
+
+        /** LoginResponse error */
+        error?: (string|null);
     }
 
     /** Represents a LoginResponse. */
@@ -230,6 +233,9 @@ export namespace mds {
 
         /** LoginResponse region. */
         public region: string;
+
+        /** LoginResponse error. */
+        public error: string;
 
         /**
          * Creates a new LoginResponse instance using the specified properties.

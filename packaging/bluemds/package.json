@@ -1,0 +1,25 @@
+{
+  "name": "bluemds",
+  "version": "0.1.0",
+  "description": "Blueboat MDS client library",
+  "main": "index.js",
+  "module": "index.esm.js",
+  "typings": "index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/losfair/blueboat-mds.git"
+  },
+  "author": "Heyang Zhou <heyang.zhou@icloud.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/losfair/blueboat-mds/issues"
+  },
+  "homepage": "https://github.com/losfair/blueboat-mds#readme",
+  "dependencies": {
+    "protobufjs": "^6.11.2",
+    "winston": "^3.3.3"
+  }
+}
