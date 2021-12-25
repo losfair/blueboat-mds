@@ -21,6 +21,7 @@ export class MdsClient {
   private laneCompletions: Map<number, { resolve: (res: mds.Response) => void, reject: (err: Error) => void }> = new Map();
   private broken: boolean = false;
   private serverInfo: MdsServerInfo | null = null;
+  private onError: (() => void) | null;
 
   constructor({ endpoint, secretKey, store, numLanes }: { endpoint: string, secretKey: string, store: string, numLanes: number }) {
     this.ws = null;
@@ -37,6 +38,11 @@ export class MdsClient {
     for (let i = 0; i < numLanes; i++) {
       this.lanePool.push(i);
     }
+    this.onError = null;
+  }
+
+  setOnError(onError: () => void) {
+    this.onError = onError;
   }
 
   async init() {
@@ -129,6 +135,7 @@ export class MdsClient {
     })
     this.laneCompletions = new Map();
     this.broken = true;
+    if (this.onError) this.onError();
   }
 
   private onWsClose(e: WebSocket.CloseEvent) {
@@ -138,6 +145,7 @@ export class MdsClient {
     })
     this.laneCompletions = new Map();
     this.broken = true;
+    if (this.onError) this.onError();
   }
 
   private async grabLane(): Promise<number> {

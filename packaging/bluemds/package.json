@@ -1,6 +1,6 @@
 {
   "name": "bluemds",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Blueboat MDS client library",
   "main": "index.js",
   "module": "index.esm.js",

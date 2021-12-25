@@ -34,12 +34,14 @@ declare module 'bluemds/src/client' {
       private laneCompletions;
       private broken;
       private serverInfo;
+      private onError;
       constructor({ endpoint, secretKey, store, numLanes }: {
           endpoint: string;
           secretKey: string;
           store: string;
           numLanes: number;
       });
+      setOnError(onError: () => void): void;
       init(): Promise<void>;
       close(): void;
       getServerInfo(): MdsServerInfo;

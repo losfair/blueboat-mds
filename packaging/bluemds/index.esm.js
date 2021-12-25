@@ -4672,6 +4672,10 @@ var MdsClient = class {
     for (let i = 0; i < numLanes; i++) {
       this.lanePool.push(i);
     }
+    this.onError = null;
+  }
+  setOnError(onError) {
+    this.onError = onError;
   }
   async init() {
     this.publicKey = await ed25519.getPublicKey(this.secretKey);
@@ -4756,6 +4760,8 @@ var MdsClient = class {
     });
     this.laneCompletions = /* @__PURE__ */ new Map();
     this.broken = true;
+    if (this.onError)
+      this.onError();
   }
   onWsClose(e) {
     winston.error("onWsClose", e);
@@ -4764,6 +4770,8 @@ var MdsClient = class {
     });
     this.laneCompletions = /* @__PURE__ */ new Map();
     this.broken = true;
+    if (this.onError)
+      this.onError();
   }
   async grabLane() {
     await this.laneSem.acquire();
