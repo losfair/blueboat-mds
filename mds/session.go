@@ -297,12 +297,35 @@ func (s *MdsSession) jsBase64Decode(value goja.Value) goja.Value {
 	}
 }
 
-func (s *MdsSession) stringToArrayBuffer(value string) goja.ArrayBuffer {
-	return s.vm.NewArrayBuffer([]byte(value))
+func (s *MdsSession) stringToArrayBuffer(value goja.Value) goja.Value {
+	if value.SameAs(goja.Undefined()) {
+		return goja.Undefined()
+	} else if value.SameAs(goja.Null()) {
+		return goja.Null()
+	} else {
+		strValue, ok := value.Export().(string)
+		if !ok {
+			panic(s.vm.ToValue("stringToArrayBuffer: expected string"))
+		}
+
+		b := []byte(strValue)
+		return s.vm.ToValue(s.vm.NewArrayBuffer(b))
+	}
 }
 
-func (s *MdsSession) arrayBufferToString(value goja.ArrayBuffer) string {
-	return string(value.Bytes())
+func (s *MdsSession) arrayBufferToString(value goja.Value) goja.Value {
+	if value.SameAs(goja.Undefined()) {
+		return goja.Undefined()
+	} else if value.SameAs(goja.Null()) {
+		return goja.Null()
+	} else {
+		abValue := value.Export()
+		if v, ok := abValue.(goja.ArrayBuffer); ok {
+			return s.vm.ToValue(string(v.Bytes()))
+		} else {
+			panic(s.vm.ToValue("arrayBufferToString: expected ArrayBuffer"))
+		}
+	}
 }
 
 func (s *MdsSession) normalizeJsBytes(value goja.Value) []byte {
