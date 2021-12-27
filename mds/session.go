@@ -1,7 +1,10 @@
 package mds
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -42,6 +45,12 @@ type jsFutureByteSlice struct {
 	future fdb.FutureByteSlice
 }
 
+type jsImmediateByteSlice struct {
+	s        *MdsSession
+	value    []byte
+	hasValue bool
+}
+
 type jsRangeResult struct {
 	s          *MdsSession
 	fullPrefix []byte
@@ -77,14 +86,44 @@ func (s *MdsSession) throwFdbError(txn *fdb.Transaction, err error) {
 	}
 }
 
-func jsTxnCore_Get(s *MdsSession, txn fdb.ReadTransaction, key goja.Value) jsFutureByteSlice {
+func handleSpecialKeyGet(s *MdsSession, txn fdb.ReadTransaction, specialKey []byte) jsImmediateByteSlice {
+	key := string(specialKey)
+	switch key {
+	case "\x02read_version\x00":
+		rv, err := txn.GetReadVersion().Get()
+		if err != nil {
+			panic(s.vm.ToValue(err.Error()))
+		}
+		var buf [8]byte
+		binary.BigEndian.PutUint64(buf[:], uint64(rv))
+		encoded := hex.EncodeToString(buf[:])
+		return jsImmediateByteSlice{
+			s:        s,
+			value:    []byte(encoded),
+			hasValue: true,
+		}
+	default:
+		return jsImmediateByteSlice{
+			s:        s,
+			hasValue: false,
+		}
+	}
+}
+
+func jsTxnCore_Get(s *MdsSession, txn fdb.ReadTransaction, key goja.Value) goja.Value {
+	keyBytes := s.normalizeJsBytes(key)
+	if bytes.HasPrefix(keyBytes, []byte("\x02@\x00")) {
+		specialKey := keyBytes[3:]
+		return s.vm.ToValue(handleSpecialKeyGet(s, txn, specialKey))
+	}
+
 	rawKey := append([]byte(nil), s.ss.Bytes()...)
-	rawKey = append(rawKey, s.normalizeJsBytes(key)...)
+	rawKey = append(rawKey, keyBytes...)
 	s.checkAndIncIoSize(len(rawKey))
-	return jsFutureByteSlice{
+	return s.vm.ToValue(jsFutureByteSlice{
 		s:      s,
 		future: txn.Get(fdb.Key(rawKey)),
-	}
+	})
 }
 
 func jsTxnCore_PrefixList(s *MdsSession, txn fdb.ReadTransaction, prefix goja.Value, options *goja.Object) jsRangeResult {
@@ -149,7 +188,7 @@ func jsTxnCore_PrefixList(s *MdsSession, txn fdb.ReadTransaction, prefix goja.Va
 	}
 }
 
-func (t jsReplicaTxn) Get(key goja.Value) jsFutureByteSlice {
+func (t jsReplicaTxn) Get(key goja.Value) goja.Value {
 	return jsTxnCore_Get(t.s, t.txn, key)
 }
 
@@ -170,6 +209,14 @@ func (f jsFutureByteSlice) Wait() goja.Value {
 	}
 }
 
+func (f jsImmediateByteSlice) Wait() goja.Value {
+	if f.hasValue {
+		return f.s.vm.ToValue(f.s.vm.NewArrayBuffer(f.value))
+	} else {
+		return goja.Null()
+	}
+}
+
 func (f jsFutureNil) Wait() {
 	err := f.future.Get()
 	if err != nil {
@@ -177,7 +224,7 @@ func (f jsFutureNil) Wait() {
 	}
 }
 
-func (t jsPrimaryTxn) Get(key goja.Value) jsFutureByteSlice {
+func (t jsPrimaryTxn) Get(key goja.Value) goja.Value {
 	return jsTxnCore_Get(t.s, t.txn, key)
 }
 
