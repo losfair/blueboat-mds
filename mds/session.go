@@ -31,8 +31,9 @@ type MdsSession struct {
 }
 
 type jsPrimaryTxn struct {
-	s   *MdsSession
-	txn fdb.Transaction
+	s               *MdsSession
+	txn             fdb.Transaction
+	hasVersionstamp *bool
 }
 
 type jsReplicaTxn struct {
@@ -58,10 +59,16 @@ type jsRangeResult struct {
 	wantValue  bool
 }
 
-type jsFutureNil struct {
-	s      *MdsSession
-	txn    fdb.Transaction
-	future fdb.FutureNil
+type jsFutureCommit struct {
+	s                     *MdsSession
+	txn                   fdb.Transaction
+	future                fdb.FutureNil
+	versionstampFuture    fdb.FutureKey
+	hasVersionstampFuture bool
+}
+
+type jsCommitResult struct {
+	Versionstamp goja.ArrayBuffer
 }
 
 type jsFdbError struct {
@@ -217,11 +224,22 @@ func (f jsImmediateByteSlice) Wait() goja.Value {
 	}
 }
 
-func (f jsFutureNil) Wait() {
+func (f jsFutureCommit) Wait() jsCommitResult {
 	err := f.future.Get()
 	if err != nil {
 		f.s.throwFdbError(&f.txn, err)
 	}
+
+	res := jsCommitResult{}
+
+	if f.hasVersionstampFuture {
+		versionStamp, err := f.versionstampFuture.Get()
+		if err != nil {
+			f.s.throwFdbError(&f.txn, err)
+		}
+		res.Versionstamp = f.s.vm.NewArrayBuffer(versionStamp)
+	}
+	return res
 }
 
 func (t jsPrimaryTxn) Get(key goja.Value) goja.Value {
@@ -237,6 +255,32 @@ func (t jsPrimaryTxn) Set(key goja.Value, value goja.Value) goja.Value {
 	t.s.checkAndIncIoSize(len(valueBytes))
 
 	t.txn.Set(fdb.Key(rawKey), valueBytes)
+	return goja.Undefined()
+}
+
+func (t jsPrimaryTxn) SetVersionstampedKey(key goja.Value, value goja.Value) goja.Value {
+	rawKey := append([]byte(nil), t.s.ss.Bytes()...)
+	rawKey = append(rawKey, t.s.normalizeJsBytes(key)...)
+	t.s.checkAndIncIoSize(len(rawKey))
+
+	valueBytes := t.s.normalizeJsBytes(value)
+	t.s.checkAndIncIoSize(len(valueBytes))
+
+	t.txn.SetVersionstampedKey(fdb.Key(rawKey), valueBytes)
+	*t.hasVersionstamp = true
+	return goja.Undefined()
+}
+
+func (t jsPrimaryTxn) SetVersionstampedValue(key goja.Value, value goja.Value) goja.Value {
+	rawKey := append([]byte(nil), t.s.ss.Bytes()...)
+	rawKey = append(rawKey, t.s.normalizeJsBytes(key)...)
+	t.s.checkAndIncIoSize(len(rawKey))
+
+	valueBytes := t.s.normalizeJsBytes(value)
+	t.s.checkAndIncIoSize(len(valueBytes))
+
+	t.txn.SetVersionstampedValue(fdb.Key(rawKey), valueBytes)
+	*t.hasVersionstamp = true
 	return goja.Undefined()
 }
 
@@ -262,8 +306,13 @@ func (t jsPrimaryTxn) PrefixDelete(prefix goja.Value) {
 	t.txn.ClearRange(r)
 }
 
-func (t jsPrimaryTxn) Commit() jsFutureNil {
-	return jsFutureNil{s: t.s, txn: t.txn, future: t.txn.Commit()}
+func (t jsPrimaryTxn) Commit() jsFutureCommit {
+	fut := jsFutureCommit{s: t.s, txn: t.txn, future: t.txn.Commit()}
+	if *t.hasVersionstamp {
+		fut.versionstampFuture = t.txn.GetVersionstamp()
+		fut.hasVersionstampFuture = true
+	}
+	return fut
 }
 
 func (r jsRangeResult) Collect() []goja.Value {
@@ -393,8 +442,9 @@ func (s *MdsSession) createPrimaryTransaction(call goja.FunctionCall) goja.Value
 	}
 
 	return s.vm.ToValue(jsPrimaryTxn{
-		s:   s,
-		txn: txn,
+		s:               s,
+		hasVersionstamp: new(bool),
+		txn:             txn,
 	})
 }
 
