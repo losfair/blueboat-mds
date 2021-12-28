@@ -307,11 +307,12 @@ func (t jsPrimaryTxn) PrefixDelete(prefix goja.Value) {
 }
 
 func (t jsPrimaryTxn) Commit() jsFutureCommit {
-	fut := jsFutureCommit{s: t.s, txn: t.txn, future: t.txn.Commit()}
+	fut := jsFutureCommit{s: t.s, txn: t.txn}
 	if *t.hasVersionstamp {
 		fut.versionstampFuture = t.txn.GetVersionstamp()
 		fut.hasVersionstampFuture = true
 	}
+	fut.future = t.txn.Commit()
 	return fut
 }
 
