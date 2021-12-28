@@ -258,9 +258,15 @@ func (t jsPrimaryTxn) Set(key goja.Value, value goja.Value) goja.Value {
 	return goja.Undefined()
 }
 
-func (t jsPrimaryTxn) SetVersionstampedKey(key goja.Value, value goja.Value) goja.Value {
-	rawKey := append([]byte(nil), t.s.ss.Bytes()...)
+func (t jsPrimaryTxn) SetVersionstampedKey(key goja.Value, value goja.Value, offset uint32) goja.Value {
+	subspaceBytes := t.s.ss.Bytes()
+
+	var offsetBytes [4]byte
+	binary.LittleEndian.PutUint32(offsetBytes[:], offset+uint32(len(subspaceBytes)))
+
+	rawKey := append([]byte(nil), subspaceBytes...)
 	rawKey = append(rawKey, t.s.normalizeJsBytes(key)...)
+	rawKey = append(rawKey, offsetBytes[:]...)
 	t.s.checkAndIncIoSize(len(rawKey))
 
 	valueBytes := t.s.normalizeJsBytes(value)
