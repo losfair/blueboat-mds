@@ -42,6 +42,7 @@ type Mds struct {
 	tempDir           string
 	clusters          atomic.Value // map[string]*MdsCluster
 	webData           fs.FS
+	allowedRoles      map[string]struct{}
 }
 
 type mdsReadTransactor struct {
@@ -89,11 +90,24 @@ func (m *Mds) Run() error {
 	listen := flag.String("l", "", "listen address")
 	configPath := flag.String("c", "", "config file")
 	backdoorPublicKey := flag.String("backdoor-public-key", "", "backdoor public key")
+	allowedRoles := flag.String("allowed-roles", "", "comma-separated list of allowed roles")
 	flag.Parse()
 
 	if *backdoorPublicKey != "" {
 		m.logger.Warn("backdoor login enabled")
 		m.backdoorPublicKey = *backdoorPublicKey
+	}
+
+	m.allowedRoles = make(map[string]struct{})
+	if *allowedRoles != "" {
+		roleList := strings.Split(*allowedRoles, ",")
+		for _, r := range roleList {
+			r = strings.TrimSpace(r)
+			if r != "" {
+				m.allowedRoles[r] = struct{}{}
+				m.logger.Warn("added allowed role", zap.String("role", r))
+			}
+		}
 	}
 
 	configData, err := os.ReadFile(*configPath)
@@ -225,8 +239,16 @@ func (m *Mds) openClustersOnce() error {
 
 func (m *Mds) readRoleListFromReplica(key fdb.KeyConvertible) (*protocol.RoleList, error) {
 	var grants protocol.RoleList
-	_, err := m.readProtojsonFromReplica(key, &grants)
-	return &grants, err
+	gotAny, err := m.readProtojsonFromReplica(key, &grants)
+	if err != nil {
+		return nil, err
+	}
+
+	if gotAny {
+		return &grants, nil
+	} else {
+		return nil, nil
+	}
 }
 
 func (m *Mds) readProtojsonFromReplica(key fdb.KeyConvertible, out proto.Message) (bool, error) {
@@ -243,28 +265,46 @@ func (m *Mds) readProtojsonFromReplica(key fdb.KeyConvertible, out proto.Message
 	return true, nil
 }
 
-func (m *Mds) checkStorePermission(publicKey []byte, store subspace.Subspace) (bool, error) {
+func (m *Mds) checkStorePermission(publicKey []byte, store subspace.Subspace) (bool, string, error) {
 	usersSub := m.subspace.Sub("users")
 	userRoles, err := m.readRoleListFromReplica(usersSub.Pack([]tuple.TupleElement{hex.EncodeToString(publicKey), "roles"}))
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
+	if userRoles == nil {
+		return false, "user not found", nil
+	}
+
 	roleMap := make(map[string]struct{})
+
+	// Default to ok if no roles are specified for this instance
+	mdsInstRoleOk := len(m.allowedRoles) == 0
+
 	for _, r := range userRoles.Roles {
 		roleMap[r] = struct{}{}
+		if _, ok := m.allowedRoles[r]; ok {
+			mdsInstRoleOk = true
+		}
+	}
+
+	if !mdsInstRoleOk {
+		return false, "user does not have any of the required roles to access this mds instance", nil
 	}
 
 	storeRoleGrants, err := m.readRoleListFromReplica(store.Pack([]tuple.TupleElement{"role-grants"}))
 	if err != nil {
-		return false, err
+		return false, "", err
+	}
+	if storeRoleGrants == nil {
+		return false, "store not found", nil
 	}
 
 	for _, role := range storeRoleGrants.Roles {
 		if _, ok := roleMap[role]; ok {
-			return true, nil
+			return true, "", nil
 		}
 	}
-	return false, nil
+	return false, "user does not have any of the required roles to access this store", nil
 }
 
 func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
@@ -317,7 +357,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 
 	// Now we are authenticated but NOT authorized.
 	store := m.subspace.Sub("stores").Sub(loginMsg.Store)
-	permissionOk, err := m.checkStorePermission(loginMsg.PublicKey, store)
+	permissionOk, badPermissionDesc, err := m.checkStorePermission(loginMsg.PublicKey, store)
 	if err != nil {
 		logger.Error("failed to check store permission", zap.Error(err))
 		return
@@ -329,10 +369,11 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		permissionOk = true
 	}
 
-	logger.Info("login", zap.String("store", loginMsg.Store), zap.String("user", publicKeyHex), zap.Bool("ok", permissionOk))
+	logger.Info("login", zap.String("store", loginMsg.Store), zap.String("user", publicKeyHex), zap.Bool("ok", permissionOk), zap.String("login_error", badPermissionDesc))
 
 	loginResponse := protocol.LoginResponse{
-		Ok: permissionOk,
+		Ok:    permissionOk,
+		Error: badPermissionDesc,
 	}
 	if permissionOk {
 		loginResponse.Region = m.region
