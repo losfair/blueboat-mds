@@ -580,7 +580,7 @@ func (x *ClusterRegion) GetConfig() string {
 	return ""
 }
 
-type RoleList struct {
+type UserRoleList struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -588,8 +588,8 @@ type RoleList struct {
 	Roles []string `protobuf:"bytes,1,rep,name=roles,proto3" json:"roles,omitempty"`
 }
 
-func (x *RoleList) Reset() {
-	*x = RoleList{}
+func (x *UserRoleList) Reset() {
+	*x = UserRoleList{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_mds_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -597,13 +597,13 @@ func (x *RoleList) Reset() {
 	}
 }
 
-func (x *RoleList) String() string {
+func (x *UserRoleList) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RoleList) ProtoMessage() {}
+func (*UserRoleList) ProtoMessage() {}
 
-func (x *RoleList) ProtoReflect() protoreflect.Message {
+func (x *UserRoleList) ProtoReflect() protoreflect.Message {
 	mi := &file_mds_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -615,14 +615,69 @@ func (x *RoleList) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RoleList.ProtoReflect.Descriptor instead.
-func (*RoleList) Descriptor() ([]byte, []int) {
+// Deprecated: Use UserRoleList.ProtoReflect.Descriptor instead.
+func (*UserRoleList) Descriptor() ([]byte, []int) {
 	return file_mds_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *RoleList) GetRoles() []string {
+func (x *UserRoleList) GetRoles() []string {
 	if x != nil {
 		return x.Roles
+	}
+	return nil
+}
+
+type StoreRoleList struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Roles         []string `protobuf:"bytes,1,rep,name=roles,proto3" json:"roles,omitempty"`
+	ReadonlyRoles []string `protobuf:"bytes,2,rep,name=readonly_roles,json=readonlyRoles,proto3" json:"readonly_roles,omitempty"`
+}
+
+func (x *StoreRoleList) Reset() {
+	*x = StoreRoleList{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *StoreRoleList) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StoreRoleList) ProtoMessage() {}
+
+func (x *StoreRoleList) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StoreRoleList.ProtoReflect.Descriptor instead.
+func (*StoreRoleList) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *StoreRoleList) GetRoles() []string {
+	if x != nil {
+		return x.Roles
+	}
+	return nil
+}
+
+func (x *StoreRoleList) GetReadonlyRoles() []string {
+	if x != nil {
+		return x.ReadonlyRoles
 	}
 	return nil
 }
@@ -679,11 +734,16 @@ var file_mds_proto_rawDesc = []byte{
 	0x75, 0x73, 0x74, 0x65, 0x72, 0x52, 0x65, 0x67, 0x69, 0x6f, 0x6e, 0x12, 0x16, 0x0a, 0x06, 0x72,
 	0x65, 0x67, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x65, 0x67,
 	0x69, 0x6f, 0x6e, 0x12, 0x16, 0x0a, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x22, 0x20, 0x0a, 0x08, 0x52,
-	0x6f, 0x6c, 0x65, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x72, 0x6f, 0x6c, 0x65, 0x73,
-	0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x72, 0x6f, 0x6c, 0x65, 0x73, 0x42, 0x0c, 0x5a,
-	0x0a, 0x2e, 0x3b, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x22, 0x24, 0x0a, 0x0c, 0x55,
+	0x73, 0x65, 0x72, 0x52, 0x6f, 0x6c, 0x65, 0x4c, 0x69, 0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x72,
+	0x6f, 0x6c, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x72, 0x6f, 0x6c, 0x65,
+	0x73, 0x22, 0x4c, 0x0a, 0x0d, 0x53, 0x74, 0x6f, 0x72, 0x65, 0x52, 0x6f, 0x6c, 0x65, 0x4c, 0x69,
+	0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x72, 0x6f, 0x6c, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28,
+	0x09, 0x52, 0x05, 0x72, 0x6f, 0x6c, 0x65, 0x73, 0x12, 0x25, 0x0a, 0x0e, 0x72, 0x65, 0x61, 0x64,
+	0x6f, 0x6e, 0x6c, 0x79, 0x5f, 0x72, 0x6f, 0x6c, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x09,
+	0x52, 0x0d, 0x72, 0x65, 0x61, 0x64, 0x6f, 0x6e, 0x6c, 0x79, 0x52, 0x6f, 0x6c, 0x65, 0x73, 0x42,
+	0x0c, 0x5a, 0x0a, 0x2e, 0x3b, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -698,7 +758,7 @@ func file_mds_proto_rawDescGZIP() []byte {
 	return file_mds_proto_rawDescData
 }
 
-var file_mds_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_mds_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_mds_proto_goTypes = []interface{}{
 	(*LoginChallenge)(nil), // 0: mds.LoginChallenge
 	(*Login)(nil),          // 1: mds.Login
@@ -709,7 +769,8 @@ var file_mds_proto_goTypes = []interface{}{
 	(*ErrorResponse)(nil),  // 6: mds.ErrorResponse
 	(*Cluster)(nil),        // 7: mds.Cluster
 	(*ClusterRegion)(nil),  // 8: mds.ClusterRegion
-	(*RoleList)(nil),       // 9: mds.RoleList
+	(*UserRoleList)(nil),   // 9: mds.UserRoleList
+	(*StoreRoleList)(nil),  // 10: mds.StoreRoleList
 }
 var file_mds_proto_depIdxs = []int32{
 	6, // 0: mds.Response.error:type_name -> mds.ErrorResponse
@@ -837,7 +898,19 @@ func file_mds_proto_init() {
 			}
 		}
 		file_mds_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RoleList); i {
+			switch v := v.(*UserRoleList); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*StoreRoleList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -859,7 +932,7 @@ func file_mds_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_mds_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

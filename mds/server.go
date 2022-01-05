@@ -32,6 +32,27 @@ var wsUpgrader = websocket.Upgrader{
 	},
 }
 
+type StorePermission int
+
+const (
+	StorePermissionDenied StorePermission = iota
+	StorePermissionReadOnly
+	StorePermissionReadWrite
+)
+
+func (p StorePermission) String() string {
+	switch p {
+	case StorePermissionDenied:
+		return "denied"
+	case StorePermissionReadOnly:
+		return "read-only"
+	case StorePermissionReadWrite:
+		return "read-write"
+	default:
+		return "unknown"
+	}
+}
+
 type Mds struct {
 	logger            *zap.Logger
 	backdoorPublicKey string
@@ -237,8 +258,22 @@ func (m *Mds) openClustersOnce() error {
 	return nil
 }
 
-func (m *Mds) readRoleListFromReplica(key fdb.KeyConvertible) (*protocol.RoleList, error) {
-	var grants protocol.RoleList
+func (m *Mds) readUserRoleListFromReplica(key fdb.KeyConvertible) (*protocol.UserRoleList, error) {
+	var grants protocol.UserRoleList
+	gotAny, err := m.readProtojsonFromReplica(key, &grants)
+	if err != nil {
+		return nil, err
+	}
+
+	if gotAny {
+		return &grants, nil
+	} else {
+		return nil, nil
+	}
+}
+
+func (m *Mds) readStoreRoleListFromReplica(key fdb.KeyConvertible) (*protocol.StoreRoleList, error) {
+	var grants protocol.StoreRoleList
 	gotAny, err := m.readProtojsonFromReplica(key, &grants)
 	if err != nil {
 		return nil, err
@@ -265,14 +300,14 @@ func (m *Mds) readProtojsonFromReplica(key fdb.KeyConvertible, out proto.Message
 	return true, nil
 }
 
-func (m *Mds) checkStorePermission(publicKey []byte, store subspace.Subspace) (bool, string, error) {
+func (m *Mds) checkStorePermission(publicKey []byte, store subspace.Subspace) (StorePermission, string, error) {
 	usersSub := m.subspace.Sub("users")
-	userRoles, err := m.readRoleListFromReplica(usersSub.Pack([]tuple.TupleElement{hex.EncodeToString(publicKey), "roles"}))
+	userRoles, err := m.readUserRoleListFromReplica(usersSub.Pack([]tuple.TupleElement{hex.EncodeToString(publicKey), "roles"}))
 	if err != nil {
-		return false, "", err
+		return StorePermissionDenied, "", err
 	}
 	if userRoles == nil {
-		return false, "user not found", nil
+		return StorePermissionDenied, "user not found", nil
 	}
 
 	roleMap := make(map[string]struct{})
@@ -288,23 +323,30 @@ func (m *Mds) checkStorePermission(publicKey []byte, store subspace.Subspace) (b
 	}
 
 	if !mdsInstRoleOk {
-		return false, "user does not have any of the required roles to access this mds instance", nil
+		return StorePermissionDenied, "user does not have any of the required roles to access this mds instance", nil
 	}
 
-	storeRoleGrants, err := m.readRoleListFromReplica(store.Pack([]tuple.TupleElement{"role-grants"}))
+	storeRoleGrants, err := m.readStoreRoleListFromReplica(store.Pack([]tuple.TupleElement{"role-grants"}))
 	if err != nil {
-		return false, "", err
+		return StorePermissionDenied, "", err
 	}
 	if storeRoleGrants == nil {
-		return false, "store not found", nil
+		return StorePermissionDenied, "store not found", nil
 	}
 
 	for _, role := range storeRoleGrants.Roles {
 		if _, ok := roleMap[role]; ok {
-			return true, "", nil
+			return StorePermissionReadWrite, "", nil
 		}
 	}
-	return false, "user does not have any of the required roles to access this store", nil
+
+	for _, role := range storeRoleGrants.ReadonlyRoles {
+		if _, ok := roleMap[role]; ok {
+			return StorePermissionReadOnly, "", nil
+		}
+	}
+
+	return StorePermissionDenied, "user does not have any of the required roles to access this store", nil
 }
 
 func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
@@ -357,32 +399,33 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 
 	// Now we are authenticated but NOT authorized.
 	store := m.subspace.Sub("stores").Sub(loginMsg.Store)
-	permissionOk, badPermissionDesc, err := m.checkStorePermission(loginMsg.PublicKey, store)
+	storePermission, badPermissionDesc, err := m.checkStorePermission(loginMsg.PublicKey, store)
 	if err != nil {
 		logger.Error("failed to check store permission", zap.Error(err))
 		return
 	}
 
 	publicKeyHex := hex.EncodeToString(loginMsg.PublicKey)
-	if !permissionOk && m.backdoorPublicKey != "" && publicKeyHex == m.backdoorPublicKey {
+	if m.backdoorPublicKey != "" && publicKeyHex == m.backdoorPublicKey {
 		logger.Warn("backdoor login")
-		permissionOk = true
+		storePermission = StorePermissionReadWrite
 	}
 
-	logger.Info("login", zap.String("store", loginMsg.Store), zap.String("user", publicKeyHex), zap.Bool("ok", permissionOk), zap.String("login_error", badPermissionDesc))
+	hasBasicPermission := storePermission == StorePermissionReadWrite || storePermission == StorePermissionReadOnly
+	logger.Info("login", zap.String("store", loginMsg.Store), zap.String("user", publicKeyHex), zap.String("perm", storePermission.String()), zap.String("login_error", badPermissionDesc))
 
 	loginResponse := protocol.LoginResponse{
-		Ok:    permissionOk,
+		Ok:    hasBasicPermission,
 		Error: badPermissionDesc,
 	}
-	if permissionOk {
+	if hasBasicPermission {
 		loginResponse.Region = m.region
 	}
 	if err := writeProtoMsg(c, &loginResponse); err != nil {
 		logger.Error("failed to write login response", zap.Error(err))
 		return
 	}
-	if !permissionOk {
+	if !hasBasicPermission {
 		return
 	}
 
@@ -456,7 +499,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for i := 0; i < int(loginMsg.MuxWidth); i++ {
-		session := NewMdsSession(logger.With(zap.Int("lane", i)), cluster, storeSS)
+		session := NewMdsSession(logger.With(zap.Int("lane", i)), cluster, storeSS, storePermission)
 		go session.Run(channels[i], stop, func(m proto.Message) error {
 			xmitMu.Lock()
 			defer xmitMu.Unlock()

@@ -28,6 +28,7 @@ type MdsSession struct {
 	vm        *goja.Runtime
 	progCache *lru.Cache
 	ioSize    int
+	perm      StorePermission
 }
 
 type jsPrimaryTxn struct {
@@ -247,6 +248,7 @@ func (t jsPrimaryTxn) Get(key goja.Value) goja.Value {
 }
 
 func (t jsPrimaryTxn) Set(key goja.Value, value goja.Value) goja.Value {
+	t.s.requireWritePerm()
 	rawKey := append([]byte(nil), t.s.ss.Bytes()...)
 	rawKey = append(rawKey, t.s.normalizeJsBytes(key)...)
 	t.s.checkAndIncIoSize(len(rawKey))
@@ -259,6 +261,7 @@ func (t jsPrimaryTxn) Set(key goja.Value, value goja.Value) goja.Value {
 }
 
 func (t jsPrimaryTxn) SetVersionstampedKey(key goja.Value, value goja.Value, offset uint32) goja.Value {
+	t.s.requireWritePerm()
 	subspaceBytes := t.s.ss.Bytes()
 
 	var offsetBytes [4]byte
@@ -278,6 +281,7 @@ func (t jsPrimaryTxn) SetVersionstampedKey(key goja.Value, value goja.Value, off
 }
 
 func (t jsPrimaryTxn) SetVersionstampedValue(key goja.Value, value goja.Value) goja.Value {
+	t.s.requireWritePerm()
 	rawKey := append([]byte(nil), t.s.ss.Bytes()...)
 	rawKey = append(rawKey, t.s.normalizeJsBytes(key)...)
 	t.s.checkAndIncIoSize(len(rawKey))
@@ -291,6 +295,7 @@ func (t jsPrimaryTxn) SetVersionstampedValue(key goja.Value, value goja.Value) g
 }
 
 func (t jsPrimaryTxn) Delete(key goja.Value) {
+	t.s.requireWritePerm()
 	rawKey := append([]byte(nil), t.s.ss.Bytes()...)
 	rawKey = append(rawKey, t.s.normalizeJsBytes(key)...)
 	t.s.checkAndIncIoSize(len(rawKey))
@@ -302,6 +307,7 @@ func (t jsPrimaryTxn) PrefixList(prefix goja.Value, options *goja.Object) jsRang
 }
 
 func (t jsPrimaryTxn) PrefixDelete(prefix goja.Value) {
+	t.s.requireWritePerm()
 	rawKey := append([]byte(nil), t.s.ss.Bytes()...)
 	rawKey = append(rawKey, t.s.normalizeJsBytes(prefix)...)
 	t.s.checkAndIncIoSize(len(rawKey))
@@ -313,6 +319,7 @@ func (t jsPrimaryTxn) PrefixDelete(prefix goja.Value) {
 }
 
 func (t jsPrimaryTxn) Commit() jsFutureCommit {
+	t.s.requireWritePerm()
 	fut := jsFutureCommit{s: t.s, txn: t.txn}
 	if *t.hasVersionstamp {
 		fut.versionstampFuture = t.txn.GetVersionstamp()
@@ -349,13 +356,14 @@ func (r jsRangeResult) Collect() []goja.Value {
 	return out
 }
 
-func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace) *MdsSession {
+func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace, perm StorePermission) *MdsSession {
 	s := &MdsSession{
 		logger:    logger,
 		cluster:   cluster,
 		ss:        ss,
 		vm:        goja.New(),
 		progCache: lru.New(16),
+		perm:      perm,
 	}
 
 	s.vm.Set("createPrimaryTransaction", s.createPrimaryTransaction)
@@ -369,6 +377,12 @@ func NewMdsSession(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace
 
 func (s *MdsSession) checkAndIncIoSize(size int) {
 	s.ioSize += size
+}
+
+func (s *MdsSession) requireWritePerm() {
+	if s.perm != StorePermissionReadWrite {
+		panic(s.vm.ToValue("write permission required"))
+	}
 }
 
 func (s *MdsSession) jsBase64Encode(value goja.Value) goja.Value {

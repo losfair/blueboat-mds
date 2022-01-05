@@ -54,6 +54,11 @@ message ClusterRegion {
   string config = 2;
 }
 
-message RoleList {
+message UserRoleList {
   repeated string roles = 1;
+}
+
+message StoreRoleList {
+  repeated string roles = 1;
+  repeated string readonly_roles = 2;
 }
