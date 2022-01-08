@@ -95,15 +95,11 @@ func NewMds(logger *zap.Logger, webData fs.FS) *Mds {
 	return m
 }
 
-func (m *Mds) PrimaryTransactor() fdb.Transactor {
-	return m.primaryRootStore
-}
-
 func (m *Mds) ReplicaReadTransactor() fdb.ReadTransactor {
 	if m.replicaRootStore != nil {
 		return mdsReadTransactor{m.replicaRootStore}
 	} else {
-		return m.primaryRootStore
+		return mdsReadTransactor{m.primaryRootStore}
 	}
 }
 
