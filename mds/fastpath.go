@@ -86,7 +86,7 @@ func (fp *Fastpath) Handle(req *protocol.Request, stop <-chan struct{}, xmit fun
 			}
 		}
 		err := xmit(&protocol.Response{
-			FastpathReqid: req.FastpathReqid,
+			Lane:          req.Lane,
 			FastpathBatch: rspVec,
 		})
 		if err != nil {

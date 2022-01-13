@@ -518,7 +518,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if msg.FastpathReqid != 0 {
+		if len(msg.FastpathBatch) > 0 {
 			fastpath.Handle(&msg, stop, xmit, kill)
 			continue
 		}

@@ -24,8 +24,7 @@ message Request {
   uint32 lane = 1;
   string program = 2;
   string data = 3;
-  uint64 fastpath_reqid = 4;
-  repeated FastpathRequest fastpath_batch = 5;
+  repeated FastpathRequest fastpath_batch = 4;
 }
 
 message Response {
@@ -34,8 +33,7 @@ message Response {
     ErrorResponse error = 2;
     string output = 3;
   }
-  uint64 fastpath_reqid = 4;
-  repeated FastpathResponse fastpath_batch = 5;
+  repeated FastpathResponse fastpath_batch = 4;
 }
 
 message FastpathRequest {
