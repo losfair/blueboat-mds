@@ -7,3 +7,6 @@ const MaxPreAuthWebSocketIncomingMessageSize = 1024 * 100 // 100KiB
 const MaxWebSocketIncomingMessageSize = 1024 * 1024 * 20  // 20MiB
 const MaxMuxWidth = 64
 const PingInterval = 25 * time.Second
+const FastpathMaxConcurrency = 500
+const FastpathMaxTxnConcurrency = 100
+const FastpathBatchMaxSize = 100

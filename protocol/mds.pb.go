@@ -20,6 +20,70 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type FastpathRequest_Op int32
+
+const (
+	FastpathRequest_INVALID    FastpathRequest_Op = 0
+	FastpathRequest_COMMIT_TXN FastpathRequest_Op = 1
+	FastpathRequest_ABORT_TXN  FastpathRequest_Op = 2
+	FastpathRequest_OPEN_TXN   FastpathRequest_Op = 3
+	FastpathRequest_GET        FastpathRequest_Op = 4
+	FastpathRequest_SET        FastpathRequest_Op = 5
+	FastpathRequest_DELETE     FastpathRequest_Op = 6
+	FastpathRequest_LIST       FastpathRequest_Op = 7
+)
+
+// Enum value maps for FastpathRequest_Op.
+var (
+	FastpathRequest_Op_name = map[int32]string{
+		0: "INVALID",
+		1: "COMMIT_TXN",
+		2: "ABORT_TXN",
+		3: "OPEN_TXN",
+		4: "GET",
+		5: "SET",
+		6: "DELETE",
+		7: "LIST",
+	}
+	FastpathRequest_Op_value = map[string]int32{
+		"INVALID":    0,
+		"COMMIT_TXN": 1,
+		"ABORT_TXN":  2,
+		"OPEN_TXN":   3,
+		"GET":        4,
+		"SET":        5,
+		"DELETE":     6,
+		"LIST":       7,
+	}
+)
+
+func (x FastpathRequest_Op) Enum() *FastpathRequest_Op {
+	p := new(FastpathRequest_Op)
+	*p = x
+	return p
+}
+
+func (x FastpathRequest_Op) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FastpathRequest_Op) Descriptor() protoreflect.EnumDescriptor {
+	return file_mds_proto_enumTypes[0].Descriptor()
+}
+
+func (FastpathRequest_Op) Type() protoreflect.EnumType {
+	return &file_mds_proto_enumTypes[0]
+}
+
+func (x FastpathRequest_Op) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FastpathRequest_Op.Descriptor instead.
+func (FastpathRequest_Op) EnumDescriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{5, 0}
+}
+
 type LoginChallenge struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -214,9 +278,11 @@ type Request struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Lane    uint32 `protobuf:"varint,1,opt,name=lane,proto3" json:"lane,omitempty"`
-	Program string `protobuf:"bytes,2,opt,name=program,proto3" json:"program,omitempty"`
-	Data    string `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	Lane          uint32             `protobuf:"varint,1,opt,name=lane,proto3" json:"lane,omitempty"`
+	Program       string             `protobuf:"bytes,2,opt,name=program,proto3" json:"program,omitempty"`
+	Data          string             `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	FastpathReqid uint64             `protobuf:"varint,4,opt,name=fastpath_reqid,json=fastpathReqid,proto3" json:"fastpath_reqid,omitempty"`
+	FastpathBatch []*FastpathRequest `protobuf:"bytes,5,rep,name=fastpath_batch,json=fastpathBatch,proto3" json:"fastpath_batch,omitempty"`
 }
 
 func (x *Request) Reset() {
@@ -272,6 +338,20 @@ func (x *Request) GetData() string {
 	return ""
 }
 
+func (x *Request) GetFastpathReqid() uint64 {
+	if x != nil {
+		return x.FastpathReqid
+	}
+	return 0
+}
+
+func (x *Request) GetFastpathBatch() []*FastpathRequest {
+	if x != nil {
+		return x.FastpathBatch
+	}
+	return nil
+}
+
 type Response struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -281,7 +361,9 @@ type Response struct {
 	// Types that are assignable to Body:
 	//	*Response_Error
 	//	*Response_Output
-	Body isResponse_Body `protobuf_oneof:"body"`
+	Body          isResponse_Body     `protobuf_oneof:"body"`
+	FastpathReqid uint64              `protobuf:"varint,4,opt,name=fastpath_reqid,json=fastpathReqid,proto3" json:"fastpath_reqid,omitempty"`
+	FastpathBatch []*FastpathResponse `protobuf:"bytes,5,rep,name=fastpath_batch,json=fastpathBatch,proto3" json:"fastpath_batch,omitempty"`
 }
 
 func (x *Response) Reset() {
@@ -344,6 +426,20 @@ func (x *Response) GetOutput() string {
 	return ""
 }
 
+func (x *Response) GetFastpathReqid() uint64 {
+	if x != nil {
+		return x.FastpathReqid
+	}
+	return 0
+}
+
+func (x *Response) GetFastpathBatch() []*FastpathResponse {
+	if x != nil {
+		return x.FastpathBatch
+	}
+	return nil
+}
+
 type isResponse_Body interface {
 	isResponse_Body()
 }
@@ -360,6 +456,266 @@ func (*Response_Error) isResponse_Body() {}
 
 func (*Response_Output) isResponse_Body() {}
 
+type FastpathRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Op          FastpathRequest_Op   `protobuf:"varint,1,opt,name=op,proto3,enum=mds.FastpathRequest_Op" json:"op,omitempty"`
+	TxnId       uint64               `protobuf:"varint,2,opt,name=txn_id,json=txnId,proto3" json:"txn_id,omitempty"`
+	IsPrimary   bool                 `protobuf:"varint,3,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"`
+	Kvp         []*KeyValuePair      `protobuf:"bytes,4,rep,name=kvp,proto3" json:"kvp,omitempty"`
+	ListOptions *FastpathListOptions `protobuf:"bytes,5,opt,name=list_options,json=listOptions,proto3" json:"list_options,omitempty"`
+}
+
+func (x *FastpathRequest) Reset() {
+	*x = FastpathRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *FastpathRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FastpathRequest) ProtoMessage() {}
+
+func (x *FastpathRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FastpathRequest.ProtoReflect.Descriptor instead.
+func (*FastpathRequest) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *FastpathRequest) GetOp() FastpathRequest_Op {
+	if x != nil {
+		return x.Op
+	}
+	return FastpathRequest_INVALID
+}
+
+func (x *FastpathRequest) GetTxnId() uint64 {
+	if x != nil {
+		return x.TxnId
+	}
+	return 0
+}
+
+func (x *FastpathRequest) GetIsPrimary() bool {
+	if x != nil {
+		return x.IsPrimary
+	}
+	return false
+}
+
+func (x *FastpathRequest) GetKvp() []*KeyValuePair {
+	if x != nil {
+		return x.Kvp
+	}
+	return nil
+}
+
+func (x *FastpathRequest) GetListOptions() *FastpathListOptions {
+	if x != nil {
+		return x.ListOptions
+	}
+	return nil
+}
+
+type FastpathListOptions struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Limit     uint32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	Reverse   bool   `protobuf:"varint,2,opt,name=reverse,proto3" json:"reverse,omitempty"`
+	WantValue bool   `protobuf:"varint,3,opt,name=want_value,json=wantValue,proto3" json:"want_value,omitempty"`
+}
+
+func (x *FastpathListOptions) Reset() {
+	*x = FastpathListOptions{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *FastpathListOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FastpathListOptions) ProtoMessage() {}
+
+func (x *FastpathListOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FastpathListOptions.ProtoReflect.Descriptor instead.
+func (*FastpathListOptions) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *FastpathListOptions) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *FastpathListOptions) GetReverse() bool {
+	if x != nil {
+		return x.Reverse
+	}
+	return false
+}
+
+func (x *FastpathListOptions) GetWantValue() bool {
+	if x != nil {
+		return x.WantValue
+	}
+	return false
+}
+
+type FastpathResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	TxnId uint64          `protobuf:"varint,1,opt,name=txn_id,json=txnId,proto3" json:"txn_id,omitempty"`
+	Error *ErrorResponse  `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	Kvp   []*KeyValuePair `protobuf:"bytes,3,rep,name=kvp,proto3" json:"kvp,omitempty"`
+}
+
+func (x *FastpathResponse) Reset() {
+	*x = FastpathResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *FastpathResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FastpathResponse) ProtoMessage() {}
+
+func (x *FastpathResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FastpathResponse.ProtoReflect.Descriptor instead.
+func (*FastpathResponse) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *FastpathResponse) GetTxnId() uint64 {
+	if x != nil {
+		return x.TxnId
+	}
+	return 0
+}
+
+func (x *FastpathResponse) GetError() *ErrorResponse {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+func (x *FastpathResponse) GetKvp() []*KeyValuePair {
+	if x != nil {
+		return x.Kvp
+	}
+	return nil
+}
+
+type KeyValuePair struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Key   []byte `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value []byte `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+}
+
+func (x *KeyValuePair) Reset() {
+	*x = KeyValuePair{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_mds_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *KeyValuePair) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*KeyValuePair) ProtoMessage() {}
+
+func (x *KeyValuePair) ProtoReflect() protoreflect.Message {
+	mi := &file_mds_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use KeyValuePair.ProtoReflect.Descriptor instead.
+func (*KeyValuePair) Descriptor() ([]byte, []int) {
+	return file_mds_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *KeyValuePair) GetKey() []byte {
+	if x != nil {
+		return x.Key
+	}
+	return nil
+}
+
+func (x *KeyValuePair) GetValue() []byte {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
 type StoreInfo struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -372,7 +728,7 @@ type StoreInfo struct {
 func (x *StoreInfo) Reset() {
 	*x = StoreInfo{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_mds_proto_msgTypes[5]
+		mi := &file_mds_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -385,7 +741,7 @@ func (x *StoreInfo) String() string {
 func (*StoreInfo) ProtoMessage() {}
 
 func (x *StoreInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_mds_proto_msgTypes[5]
+	mi := &file_mds_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -398,7 +754,7 @@ func (x *StoreInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StoreInfo.ProtoReflect.Descriptor instead.
 func (*StoreInfo) Descriptor() ([]byte, []int) {
-	return file_mds_proto_rawDescGZIP(), []int{5}
+	return file_mds_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *StoreInfo) GetCluster() string {
@@ -427,7 +783,7 @@ type ErrorResponse struct {
 func (x *ErrorResponse) Reset() {
 	*x = ErrorResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_mds_proto_msgTypes[6]
+		mi := &file_mds_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -440,7 +796,7 @@ func (x *ErrorResponse) String() string {
 func (*ErrorResponse) ProtoMessage() {}
 
 func (x *ErrorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_mds_proto_msgTypes[6]
+	mi := &file_mds_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -453,7 +809,7 @@ func (x *ErrorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorResponse.ProtoReflect.Descriptor instead.
 func (*ErrorResponse) Descriptor() ([]byte, []int) {
-	return file_mds_proto_rawDescGZIP(), []int{6}
+	return file_mds_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ErrorResponse) GetDescription() string {
@@ -482,7 +838,7 @@ type Cluster struct {
 func (x *Cluster) Reset() {
 	*x = Cluster{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_mds_proto_msgTypes[7]
+		mi := &file_mds_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -495,7 +851,7 @@ func (x *Cluster) String() string {
 func (*Cluster) ProtoMessage() {}
 
 func (x *Cluster) ProtoReflect() protoreflect.Message {
-	mi := &file_mds_proto_msgTypes[7]
+	mi := &file_mds_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -508,7 +864,7 @@ func (x *Cluster) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Cluster.ProtoReflect.Descriptor instead.
 func (*Cluster) Descriptor() ([]byte, []int) {
-	return file_mds_proto_rawDescGZIP(), []int{7}
+	return file_mds_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Cluster) GetPrimary() *ClusterRegion {
@@ -537,7 +893,7 @@ type ClusterRegion struct {
 func (x *ClusterRegion) Reset() {
 	*x = ClusterRegion{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_mds_proto_msgTypes[8]
+		mi := &file_mds_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -550,7 +906,7 @@ func (x *ClusterRegion) String() string {
 func (*ClusterRegion) ProtoMessage() {}
 
 func (x *ClusterRegion) ProtoReflect() protoreflect.Message {
-	mi := &file_mds_proto_msgTypes[8]
+	mi := &file_mds_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -563,7 +919,7 @@ func (x *ClusterRegion) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterRegion.ProtoReflect.Descriptor instead.
 func (*ClusterRegion) Descriptor() ([]byte, []int) {
-	return file_mds_proto_rawDescGZIP(), []int{8}
+	return file_mds_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ClusterRegion) GetRegion() string {
@@ -591,7 +947,7 @@ type UserRoleList struct {
 func (x *UserRoleList) Reset() {
 	*x = UserRoleList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_mds_proto_msgTypes[9]
+		mi := &file_mds_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -604,7 +960,7 @@ func (x *UserRoleList) String() string {
 func (*UserRoleList) ProtoMessage() {}
 
 func (x *UserRoleList) ProtoReflect() protoreflect.Message {
-	mi := &file_mds_proto_msgTypes[9]
+	mi := &file_mds_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -617,7 +973,7 @@ func (x *UserRoleList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserRoleList.ProtoReflect.Descriptor instead.
 func (*UserRoleList) Descriptor() ([]byte, []int) {
-	return file_mds_proto_rawDescGZIP(), []int{9}
+	return file_mds_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UserRoleList) GetRoles() []string {
@@ -639,7 +995,7 @@ type StoreRoleList struct {
 func (x *StoreRoleList) Reset() {
 	*x = StoreRoleList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_mds_proto_msgTypes[10]
+		mi := &file_mds_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -652,7 +1008,7 @@ func (x *StoreRoleList) String() string {
 func (*StoreRoleList) ProtoMessage() {}
 
 func (x *StoreRoleList) ProtoReflect() protoreflect.Message {
-	mi := &file_mds_proto_msgTypes[10]
+	mi := &file_mds_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -665,7 +1021,7 @@ func (x *StoreRoleList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StoreRoleList.ProtoReflect.Descriptor instead.
 func (*StoreRoleList) Descriptor() ([]byte, []int) {
-	return file_mds_proto_rawDescGZIP(), []int{10}
+	return file_mds_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *StoreRoleList) GetRoles() []string {
@@ -703,18 +1059,68 @@ var file_mds_proto_rawDesc = []byte{
 	0x52, 0x02, 0x6f, 0x6b, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x65, 0x67, 0x69, 0x6f, 0x6e, 0x18, 0x02,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x72, 0x65, 0x67, 0x69, 0x6f, 0x6e, 0x12, 0x14, 0x0a, 0x05,
 	0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x72, 0x72,
-	0x6f, 0x72, 0x22, 0x4b, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a,
-	0x04, 0x6c, 0x61, 0x6e, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x6c, 0x61, 0x6e,
-	0x65, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x12, 0x12, 0x0a, 0x04, 0x64,
-	0x61, 0x74, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x22,
-	0x6c, 0x0a, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6c,
-	0x61, 0x6e, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x6c, 0x61, 0x6e, 0x65, 0x12,
-	0x2a, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12,
-	0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x48, 0x00, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x12, 0x18, 0x0a, 0x06, 0x6f,
-	0x75, 0x74, 0x70, 0x75, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x06, 0x6f,
-	0x75, 0x74, 0x70, 0x75, 0x74, 0x42, 0x06, 0x0a, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x22, 0x41, 0x0a,
+	0x6f, 0x72, 0x22, 0xaf, 0x01, 0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12,
+	0x0a, 0x04, 0x6c, 0x61, 0x6e, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x04, 0x6c, 0x61,
+	0x6e, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x67, 0x72, 0x61, 0x6d, 0x12, 0x12, 0x0a, 0x04,
+	0x64, 0x61, 0x74, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61,
+	0x12, 0x25, 0x0a, 0x0e, 0x66, 0x61, 0x73, 0x74, 0x70, 0x61, 0x74, 0x68, 0x5f, 0x72, 0x65, 0x71,
+	0x69, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x0d, 0x66, 0x61, 0x73, 0x74, 0x70, 0x61,
+	0x74, 0x68, 0x52, 0x65, 0x71, 0x69, 0x64, 0x12, 0x3b, 0x0a, 0x0e, 0x66, 0x61, 0x73, 0x74, 0x70,
+	0x61, 0x74, 0x68, 0x5f, 0x62, 0x61, 0x74, 0x63, 0x68, 0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32,
+	0x14, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x46, 0x61, 0x73, 0x74, 0x70, 0x61, 0x74, 0x68, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x0d, 0x66, 0x61, 0x73, 0x74, 0x70, 0x61, 0x74, 0x68, 0x42,
+	0x61, 0x74, 0x63, 0x68, 0x22, 0xd1, 0x01, 0x0a, 0x08, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x12, 0x0a, 0x04, 0x6c, 0x61, 0x6e, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52,
+	0x04, 0x6c, 0x61, 0x6e, 0x65, 0x12, 0x2a, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x45, 0x72, 0x72, 0x6f, 0x72,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f,
+	0x72, 0x12, 0x18, 0x0a, 0x06, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x09, 0x48, 0x00, 0x52, 0x06, 0x6f, 0x75, 0x74, 0x70, 0x75, 0x74, 0x12, 0x25, 0x0a, 0x0e, 0x66,
+	0x61, 0x73, 0x74, 0x70, 0x61, 0x74, 0x68, 0x5f, 0x72, 0x65, 0x71, 0x69, 0x64, 0x18, 0x04, 0x20,
+	0x01, 0x28, 0x04, 0x52, 0x0d, 0x66, 0x61, 0x73, 0x74, 0x70, 0x61, 0x74, 0x68, 0x52, 0x65, 0x71,
+	0x69, 0x64, 0x12, 0x3c, 0x0a, 0x0e, 0x66, 0x61, 0x73, 0x74, 0x70, 0x61, 0x74, 0x68, 0x5f, 0x62,
+	0x61, 0x74, 0x63, 0x68, 0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x6d, 0x64, 0x73,
+	0x2e, 0x46, 0x61, 0x73, 0x74, 0x70, 0x61, 0x74, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x52, 0x0d, 0x66, 0x61, 0x73, 0x74, 0x70, 0x61, 0x74, 0x68, 0x42, 0x61, 0x74, 0x63, 0x68,
+	0x42, 0x06, 0x0a, 0x04, 0x62, 0x6f, 0x64, 0x79, 0x22, 0xba, 0x02, 0x0a, 0x0f, 0x46, 0x61, 0x73,
+	0x74, 0x70, 0x61, 0x74, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x27, 0x0a, 0x02,
+	0x6f, 0x70, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x17, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x46,
+	0x61, 0x73, 0x74, 0x70, 0x61, 0x74, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x4f,
+	0x70, 0x52, 0x02, 0x6f, 0x70, 0x12, 0x15, 0x0a, 0x06, 0x74, 0x78, 0x6e, 0x5f, 0x69, 0x64, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x05, 0x74, 0x78, 0x6e, 0x49, 0x64, 0x12, 0x1d, 0x0a, 0x0a,
+	0x69, 0x73, 0x5f, 0x70, 0x72, 0x69, 0x6d, 0x61, 0x72, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08,
+	0x52, 0x09, 0x69, 0x73, 0x50, 0x72, 0x69, 0x6d, 0x61, 0x72, 0x79, 0x12, 0x23, 0x0a, 0x03, 0x6b,
+	0x76, 0x70, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x11, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x4b,
+	0x65, 0x79, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x50, 0x61, 0x69, 0x72, 0x52, 0x03, 0x6b, 0x76, 0x70,
+	0x12, 0x3b, 0x0a, 0x0c, 0x6c, 0x69, 0x73, 0x74, 0x5f, 0x6f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73,
+	0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x18, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x46, 0x61, 0x73,
+	0x74, 0x70, 0x61, 0x74, 0x68, 0x4c, 0x69, 0x73, 0x74, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73,
+	0x52, 0x0b, 0x6c, 0x69, 0x73, 0x74, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x66, 0x0a,
+	0x02, 0x4f, 0x70, 0x12, 0x0b, 0x0a, 0x07, 0x49, 0x4e, 0x56, 0x41, 0x4c, 0x49, 0x44, 0x10, 0x00,
+	0x12, 0x0e, 0x0a, 0x0a, 0x43, 0x4f, 0x4d, 0x4d, 0x49, 0x54, 0x5f, 0x54, 0x58, 0x4e, 0x10, 0x01,
+	0x12, 0x0d, 0x0a, 0x09, 0x41, 0x42, 0x4f, 0x52, 0x54, 0x5f, 0x54, 0x58, 0x4e, 0x10, 0x02, 0x12,
+	0x0c, 0x0a, 0x08, 0x4f, 0x50, 0x45, 0x4e, 0x5f, 0x54, 0x58, 0x4e, 0x10, 0x03, 0x12, 0x07, 0x0a,
+	0x03, 0x47, 0x45, 0x54, 0x10, 0x04, 0x12, 0x07, 0x0a, 0x03, 0x53, 0x45, 0x54, 0x10, 0x05, 0x12,
+	0x0a, 0x0a, 0x06, 0x44, 0x45, 0x4c, 0x45, 0x54, 0x45, 0x10, 0x06, 0x12, 0x08, 0x0a, 0x04, 0x4c,
+	0x49, 0x53, 0x54, 0x10, 0x07, 0x22, 0x64, 0x0a, 0x13, 0x46, 0x61, 0x73, 0x74, 0x70, 0x61, 0x74,
+	0x68, 0x4c, 0x69, 0x73, 0x74, 0x4f, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x14, 0x0a, 0x05,
+	0x6c, 0x69, 0x6d, 0x69, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x05, 0x6c, 0x69, 0x6d,
+	0x69, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x72, 0x65, 0x76, 0x65, 0x72, 0x73, 0x65, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x08, 0x52, 0x07, 0x72, 0x65, 0x76, 0x65, 0x72, 0x73, 0x65, 0x12, 0x1d, 0x0a, 0x0a,
+	0x77, 0x61, 0x6e, 0x74, 0x5f, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08,
+	0x52, 0x09, 0x77, 0x61, 0x6e, 0x74, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x78, 0x0a, 0x10, 0x46,
+	0x61, 0x73, 0x74, 0x70, 0x61, 0x74, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x15, 0x0a, 0x06, 0x74, 0x78, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52,
+	0x05, 0x74, 0x78, 0x6e, 0x49, 0x64, 0x12, 0x28, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12, 0x2e, 0x6d, 0x64, 0x73, 0x2e, 0x45, 0x72, 0x72, 0x6f,
+	0x72, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72,
+	0x12, 0x23, 0x0a, 0x03, 0x6b, 0x76, 0x70, 0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x11, 0x2e,
+	0x6d, 0x64, 0x73, 0x2e, 0x4b, 0x65, 0x79, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x50, 0x61, 0x69, 0x72,
+	0x52, 0x03, 0x6b, 0x76, 0x70, 0x22, 0x36, 0x0a, 0x0c, 0x4b, 0x65, 0x79, 0x56, 0x61, 0x6c, 0x75,
+	0x65, 0x50, 0x61, 0x69, 0x72, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x0c, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x41, 0x0a,
 	0x09, 0x53, 0x74, 0x6f, 0x72, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6c,
 	0x75, 0x73, 0x74, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x63, 0x6c, 0x75,
 	0x73, 0x74, 0x65, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x73, 0x75, 0x62, 0x73, 0x70, 0x61, 0x63, 0x65,
@@ -758,29 +1164,42 @@ func file_mds_proto_rawDescGZIP() []byte {
 	return file_mds_proto_rawDescData
 }
 
-var file_mds_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_mds_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_mds_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_mds_proto_goTypes = []interface{}{
-	(*LoginChallenge)(nil), // 0: mds.LoginChallenge
-	(*Login)(nil),          // 1: mds.Login
-	(*LoginResponse)(nil),  // 2: mds.LoginResponse
-	(*Request)(nil),        // 3: mds.Request
-	(*Response)(nil),       // 4: mds.Response
-	(*StoreInfo)(nil),      // 5: mds.StoreInfo
-	(*ErrorResponse)(nil),  // 6: mds.ErrorResponse
-	(*Cluster)(nil),        // 7: mds.Cluster
-	(*ClusterRegion)(nil),  // 8: mds.ClusterRegion
-	(*UserRoleList)(nil),   // 9: mds.UserRoleList
-	(*StoreRoleList)(nil),  // 10: mds.StoreRoleList
+	(FastpathRequest_Op)(0),     // 0: mds.FastpathRequest.Op
+	(*LoginChallenge)(nil),      // 1: mds.LoginChallenge
+	(*Login)(nil),               // 2: mds.Login
+	(*LoginResponse)(nil),       // 3: mds.LoginResponse
+	(*Request)(nil),             // 4: mds.Request
+	(*Response)(nil),            // 5: mds.Response
+	(*FastpathRequest)(nil),     // 6: mds.FastpathRequest
+	(*FastpathListOptions)(nil), // 7: mds.FastpathListOptions
+	(*FastpathResponse)(nil),    // 8: mds.FastpathResponse
+	(*KeyValuePair)(nil),        // 9: mds.KeyValuePair
+	(*StoreInfo)(nil),           // 10: mds.StoreInfo
+	(*ErrorResponse)(nil),       // 11: mds.ErrorResponse
+	(*Cluster)(nil),             // 12: mds.Cluster
+	(*ClusterRegion)(nil),       // 13: mds.ClusterRegion
+	(*UserRoleList)(nil),        // 14: mds.UserRoleList
+	(*StoreRoleList)(nil),       // 15: mds.StoreRoleList
 }
 var file_mds_proto_depIdxs = []int32{
-	6, // 0: mds.Response.error:type_name -> mds.ErrorResponse
-	8, // 1: mds.Cluster.primary:type_name -> mds.ClusterRegion
-	8, // 2: mds.Cluster.replicas:type_name -> mds.ClusterRegion
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	6,  // 0: mds.Request.fastpath_batch:type_name -> mds.FastpathRequest
+	11, // 1: mds.Response.error:type_name -> mds.ErrorResponse
+	8,  // 2: mds.Response.fastpath_batch:type_name -> mds.FastpathResponse
+	0,  // 3: mds.FastpathRequest.op:type_name -> mds.FastpathRequest.Op
+	9,  // 4: mds.FastpathRequest.kvp:type_name -> mds.KeyValuePair
+	7,  // 5: mds.FastpathRequest.list_options:type_name -> mds.FastpathListOptions
+	11, // 6: mds.FastpathResponse.error:type_name -> mds.ErrorResponse
+	9,  // 7: mds.FastpathResponse.kvp:type_name -> mds.KeyValuePair
+	13, // 8: mds.Cluster.primary:type_name -> mds.ClusterRegion
+	13, // 9: mds.Cluster.replicas:type_name -> mds.ClusterRegion
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_mds_proto_init() }
@@ -850,7 +1269,7 @@ func file_mds_proto_init() {
 			}
 		}
 		file_mds_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StoreInfo); i {
+			switch v := v.(*FastpathRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -862,7 +1281,7 @@ func file_mds_proto_init() {
 			}
 		}
 		file_mds_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ErrorResponse); i {
+			switch v := v.(*FastpathListOptions); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -874,7 +1293,7 @@ func file_mds_proto_init() {
 			}
 		}
 		file_mds_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Cluster); i {
+			switch v := v.(*FastpathResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -886,7 +1305,7 @@ func file_mds_proto_init() {
 			}
 		}
 		file_mds_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ClusterRegion); i {
+			switch v := v.(*KeyValuePair); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -898,7 +1317,7 @@ func file_mds_proto_init() {
 			}
 		}
 		file_mds_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UserRoleList); i {
+			switch v := v.(*StoreInfo); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -910,6 +1329,54 @@ func file_mds_proto_init() {
 			}
 		}
 		file_mds_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ErrorResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Cluster); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ClusterRegion); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UserRoleList); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_mds_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*StoreRoleList); i {
 			case 0:
 				return &v.state
@@ -931,13 +1398,14 @@ func file_mds_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_mds_proto_rawDesc,
-			NumEnums:      0,
-			NumMessages:   11,
+			NumEnums:      1,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_mds_proto_goTypes,
 		DependencyIndexes: file_mds_proto_depIdxs,
+		EnumInfos:         file_mds_proto_enumTypes,
 		MessageInfos:      file_mds_proto_msgTypes,
 	}.Build()
 	File_mds_proto = out.File

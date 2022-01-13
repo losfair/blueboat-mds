@@ -494,14 +494,18 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	xmit := func(m proto.Message) error {
+		xmitMu.Lock()
+		defer xmitMu.Unlock()
+		return writeProtoMsg(c, m)
+	}
+
 	for i := 0; i < int(loginMsg.MuxWidth); i++ {
 		session := NewMdsSession(logger.With(zap.Int("lane", i)), cluster, storeSS, storePermission)
-		go session.Run(channels[i], stop, func(m proto.Message) error {
-			xmitMu.Lock()
-			defer xmitMu.Unlock()
-			return writeProtoMsg(c, m)
-		}, kill)
+		go session.Run(channels[i], stop, xmit, kill)
 	}
+
+	fastpath := NewFastpath(logger, cluster, storeSS, storePermission)
 
 	for {
 		var msg protocol.Request
@@ -512,6 +516,11 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 				logger.Error("failed to read request", zap.Error(err))
 			}
 			return
+		}
+
+		if msg.FastpathReqid != 0 {
+			fastpath.Handle(&msg, stop, xmit, kill)
+			continue
 		}
 
 		lane := int(msg.Lane)
