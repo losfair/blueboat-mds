@@ -167,7 +167,7 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 				}
 				txn = &managedTxn{
 					txn:      newTxn,
-					readonly: true,
+					readonly: !req.IsPrimary,
 				}
 			} else {
 				newTxn, err := fp.cluster.primaryStore.CreateTransaction()
@@ -176,7 +176,7 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 				}
 				txn = &managedTxn{
 					txn:      newTxn,
-					readonly: false,
+					readonly: !req.IsPrimary,
 				}
 			}
 
