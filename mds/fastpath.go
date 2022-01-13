@@ -99,6 +99,10 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 	switch req.Op {
 	case protocol.FastpathRequest_COMMIT_TXN:
 		{
+			if err := fp.checkWritePerm(); err != nil {
+				return nil, err
+			}
+
 			fp.inflightTxnMu.Lock()
 			txn, ok := fp.inflightTxns[req.TxnId]
 			if ok {
@@ -212,6 +216,9 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 		}
 	case protocol.FastpathRequest_SET:
 		{
+			if err := fp.checkWritePerm(); err != nil {
+				return nil, err
+			}
 			txn := fp.mustLoadTxn(req.TxnId)
 			if txn.readonly {
 				return nil, errors.New("SET called on read-only transaction")
@@ -221,6 +228,9 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 		}
 	case protocol.FastpathRequest_DELETE:
 		{
+			if err := fp.checkWritePerm(); err != nil {
+				return nil, err
+			}
 			txn := fp.mustLoadTxn(req.TxnId)
 			if txn.readonly {
 				return nil, errors.New("DELETE called on read-only transaction")
@@ -271,4 +281,11 @@ func (fp *Fastpath) constructKey(key []byte) fdb.Key {
 	k := append([]byte(nil), fp.ss.Bytes()...)
 	k = append(k, key...)
 	return fdb.Key(k)
+}
+
+func (fp *Fastpath) checkWritePerm() error {
+	if fp.perm != StorePermissionReadWrite {
+		return errors.New("write permission required")
+	}
+	return nil
 }
