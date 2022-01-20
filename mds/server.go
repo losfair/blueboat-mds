@@ -416,6 +416,7 @@ func (m *Mds) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	if hasBasicPermission {
 		loginResponse.Region = m.region
+		loginResponse.PingIntervalMs = uint64(PingInterval.Milliseconds())
 	}
 	if err := writeProtoMsg(c, &loginResponse); err != nil {
 		logger.Error("failed to write login response", zap.Error(err))

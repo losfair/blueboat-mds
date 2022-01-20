@@ -18,6 +18,7 @@ message LoginResponse {
   bool ok = 1;
   string region = 2;
   string error = 3;
+  uint64 ping_interval_ms = 4;
 }
 
 message Request {
