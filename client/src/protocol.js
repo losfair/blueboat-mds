@@ -518,6 +518,7 @@ $root.mds = (function() {
          * @property {boolean|null} [ok] LoginResponse ok
          * @property {string|null} [region] LoginResponse region
          * @property {string|null} [error] LoginResponse error
+         * @property {number|Long|null} [pingIntervalMs] LoginResponse pingIntervalMs
          */
 
         /**
@@ -560,6 +561,14 @@ $root.mds = (function() {
         LoginResponse.prototype.error = "";
 
         /**
+         * LoginResponse pingIntervalMs.
+         * @member {number|Long} pingIntervalMs
+         * @memberof mds.LoginResponse
+         * @instance
+         */
+        LoginResponse.prototype.pingIntervalMs = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+        /**
          * Creates a new LoginResponse instance using the specified properties.
          * @function create
          * @memberof mds.LoginResponse
@@ -589,6 +598,8 @@ $root.mds = (function() {
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.region);
             if (message.error != null && Object.hasOwnProperty.call(message, "error"))
                 writer.uint32(/* id 3, wireType 2 =*/26).string(message.error);
+            if (message.pingIntervalMs != null && Object.hasOwnProperty.call(message, "pingIntervalMs"))
+                writer.uint32(/* id 4, wireType 0 =*/32).uint64(message.pingIntervalMs);
             return writer;
         };
 
@@ -631,6 +642,9 @@ $root.mds = (function() {
                     break;
                 case 3:
                     message.error = reader.string();
+                    break;
+                case 4:
+                    message.pingIntervalMs = reader.uint64();
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -676,6 +690,9 @@ $root.mds = (function() {
             if (message.error != null && message.hasOwnProperty("error"))
                 if (!$util.isString(message.error))
                     return "error: string expected";
+            if (message.pingIntervalMs != null && message.hasOwnProperty("pingIntervalMs"))
+                if (!$util.isInteger(message.pingIntervalMs) && !(message.pingIntervalMs && $util.isInteger(message.pingIntervalMs.low) && $util.isInteger(message.pingIntervalMs.high)))
+                    return "pingIntervalMs: integer|Long expected";
             return null;
         };
 
@@ -697,6 +714,15 @@ $root.mds = (function() {
                 message.region = String(object.region);
             if (object.error != null)
                 message.error = String(object.error);
+            if (object.pingIntervalMs != null)
+                if ($util.Long)
+                    (message.pingIntervalMs = $util.Long.fromValue(object.pingIntervalMs)).unsigned = true;
+                else if (typeof object.pingIntervalMs === "string")
+                    message.pingIntervalMs = parseInt(object.pingIntervalMs, 10);
+                else if (typeof object.pingIntervalMs === "number")
+                    message.pingIntervalMs = object.pingIntervalMs;
+                else if (typeof object.pingIntervalMs === "object")
+                    message.pingIntervalMs = new $util.LongBits(object.pingIntervalMs.low >>> 0, object.pingIntervalMs.high >>> 0).toNumber(true);
             return message;
         };
 
@@ -717,6 +743,11 @@ $root.mds = (function() {
                 object.ok = false;
                 object.region = "";
                 object.error = "";
+                if ($util.Long) {
+                    var long = new $util.Long(0, 0, true);
+                    object.pingIntervalMs = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                } else
+                    object.pingIntervalMs = options.longs === String ? "0" : 0;
             }
             if (message.ok != null && message.hasOwnProperty("ok"))
                 object.ok = message.ok;
@@ -724,6 +755,11 @@ $root.mds = (function() {
                 object.region = message.region;
             if (message.error != null && message.hasOwnProperty("error"))
                 object.error = message.error;
+            if (message.pingIntervalMs != null && message.hasOwnProperty("pingIntervalMs"))
+                if (typeof message.pingIntervalMs === "number")
+                    object.pingIntervalMs = options.longs === String ? String(message.pingIntervalMs) : message.pingIntervalMs;
+                else
+                    object.pingIntervalMs = options.longs === String ? $util.Long.prototype.toString.call(message.pingIntervalMs) : options.longs === Number ? new $util.LongBits(message.pingIntervalMs.low >>> 0, message.pingIntervalMs.high >>> 0).toNumber(true) : message.pingIntervalMs;
             return object;
         };
 
@@ -750,6 +786,7 @@ $root.mds = (function() {
          * @property {number|null} [lane] Request lane
          * @property {string|null} [program] Request program
          * @property {string|null} [data] Request data
+         * @property {Array.<mds.IFastpathRequest>|null} [fastpathBatch] Request fastpathBatch
          */
 
         /**
@@ -761,6 +798,7 @@ $root.mds = (function() {
          * @param {mds.IRequest=} [properties] Properties to set
          */
         function Request(properties) {
+            this.fastpathBatch = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
@@ -792,6 +830,14 @@ $root.mds = (function() {
         Request.prototype.data = "";
 
         /**
+         * Request fastpathBatch.
+         * @member {Array.<mds.IFastpathRequest>} fastpathBatch
+         * @memberof mds.Request
+         * @instance
+         */
+        Request.prototype.fastpathBatch = $util.emptyArray;
+
+        /**
          * Creates a new Request instance using the specified properties.
          * @function create
          * @memberof mds.Request
@@ -821,6 +867,9 @@ $root.mds = (function() {
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.program);
             if (message.data != null && Object.hasOwnProperty.call(message, "data"))
                 writer.uint32(/* id 3, wireType 2 =*/26).string(message.data);
+            if (message.fastpathBatch != null && message.fastpathBatch.length)
+                for (var i = 0; i < message.fastpathBatch.length; ++i)
+                    $root.mds.FastpathRequest.encode(message.fastpathBatch[i], writer.uint32(/* id 4, wireType 2 =*/34).fork()).ldelim();
             return writer;
         };
 
@@ -863,6 +912,11 @@ $root.mds = (function() {
                     break;
                 case 3:
                     message.data = reader.string();
+                    break;
+                case 4:
+                    if (!(message.fastpathBatch && message.fastpathBatch.length))
+                        message.fastpathBatch = [];
+                    message.fastpathBatch.push($root.mds.FastpathRequest.decode(reader, reader.uint32()));
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -908,6 +962,15 @@ $root.mds = (function() {
             if (message.data != null && message.hasOwnProperty("data"))
                 if (!$util.isString(message.data))
                     return "data: string expected";
+            if (message.fastpathBatch != null && message.hasOwnProperty("fastpathBatch")) {
+                if (!Array.isArray(message.fastpathBatch))
+                    return "fastpathBatch: array expected";
+                for (var i = 0; i < message.fastpathBatch.length; ++i) {
+                    var error = $root.mds.FastpathRequest.verify(message.fastpathBatch[i]);
+                    if (error)
+                        return "fastpathBatch." + error;
+                }
+            }
             return null;
         };
 
@@ -929,6 +992,16 @@ $root.mds = (function() {
                 message.program = String(object.program);
             if (object.data != null)
                 message.data = String(object.data);
+            if (object.fastpathBatch) {
+                if (!Array.isArray(object.fastpathBatch))
+                    throw TypeError(".mds.Request.fastpathBatch: array expected");
+                message.fastpathBatch = [];
+                for (var i = 0; i < object.fastpathBatch.length; ++i) {
+                    if (typeof object.fastpathBatch[i] !== "object")
+                        throw TypeError(".mds.Request.fastpathBatch: object expected");
+                    message.fastpathBatch[i] = $root.mds.FastpathRequest.fromObject(object.fastpathBatch[i]);
+                }
+            }
             return message;
         };
 
@@ -945,6 +1018,8 @@ $root.mds = (function() {
             if (!options)
                 options = {};
             var object = {};
+            if (options.arrays || options.defaults)
+                object.fastpathBatch = [];
             if (options.defaults) {
                 object.lane = 0;
                 object.program = "";
@@ -956,6 +1031,11 @@ $root.mds = (function() {
                 object.program = message.program;
             if (message.data != null && message.hasOwnProperty("data"))
                 object.data = message.data;
+            if (message.fastpathBatch && message.fastpathBatch.length) {
+                object.fastpathBatch = [];
+                for (var j = 0; j < message.fastpathBatch.length; ++j)
+                    object.fastpathBatch[j] = $root.mds.FastpathRequest.toObject(message.fastpathBatch[j], options);
+            }
             return object;
         };
 
@@ -982,6 +1062,7 @@ $root.mds = (function() {
          * @property {number|null} [lane] Response lane
          * @property {mds.IErrorResponse|null} [error] Response error
          * @property {string|null} [output] Response output
+         * @property {Array.<mds.IFastpathResponse>|null} [fastpathBatch] Response fastpathBatch
          */
 
         /**
@@ -993,6 +1074,7 @@ $root.mds = (function() {
          * @param {mds.IResponse=} [properties] Properties to set
          */
         function Response(properties) {
+            this.fastpathBatch = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
@@ -1022,6 +1104,14 @@ $root.mds = (function() {
          * @instance
          */
         Response.prototype.output = null;
+
+        /**
+         * Response fastpathBatch.
+         * @member {Array.<mds.IFastpathResponse>} fastpathBatch
+         * @memberof mds.Response
+         * @instance
+         */
+        Response.prototype.fastpathBatch = $util.emptyArray;
 
         // OneOf field names bound to virtual getters and setters
         var $oneOfFields;
@@ -1067,6 +1157,9 @@ $root.mds = (function() {
                 $root.mds.ErrorResponse.encode(message.error, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
             if (message.output != null && Object.hasOwnProperty.call(message, "output"))
                 writer.uint32(/* id 3, wireType 2 =*/26).string(message.output);
+            if (message.fastpathBatch != null && message.fastpathBatch.length)
+                for (var i = 0; i < message.fastpathBatch.length; ++i)
+                    $root.mds.FastpathResponse.encode(message.fastpathBatch[i], writer.uint32(/* id 4, wireType 2 =*/34).fork()).ldelim();
             return writer;
         };
 
@@ -1109,6 +1202,11 @@ $root.mds = (function() {
                     break;
                 case 3:
                     message.output = reader.string();
+                    break;
+                case 4:
+                    if (!(message.fastpathBatch && message.fastpathBatch.length))
+                        message.fastpathBatch = [];
+                    message.fastpathBatch.push($root.mds.FastpathResponse.decode(reader, reader.uint32()));
                     break;
                 default:
                     reader.skipType(tag & 7);
@@ -1164,6 +1262,15 @@ $root.mds = (function() {
                 if (!$util.isString(message.output))
                     return "output: string expected";
             }
+            if (message.fastpathBatch != null && message.hasOwnProperty("fastpathBatch")) {
+                if (!Array.isArray(message.fastpathBatch))
+                    return "fastpathBatch: array expected";
+                for (var i = 0; i < message.fastpathBatch.length; ++i) {
+                    var error = $root.mds.FastpathResponse.verify(message.fastpathBatch[i]);
+                    if (error)
+                        return "fastpathBatch." + error;
+                }
+            }
             return null;
         };
 
@@ -1188,6 +1295,16 @@ $root.mds = (function() {
             }
             if (object.output != null)
                 message.output = String(object.output);
+            if (object.fastpathBatch) {
+                if (!Array.isArray(object.fastpathBatch))
+                    throw TypeError(".mds.Response.fastpathBatch: array expected");
+                message.fastpathBatch = [];
+                for (var i = 0; i < object.fastpathBatch.length; ++i) {
+                    if (typeof object.fastpathBatch[i] !== "object")
+                        throw TypeError(".mds.Response.fastpathBatch: object expected");
+                    message.fastpathBatch[i] = $root.mds.FastpathResponse.fromObject(object.fastpathBatch[i]);
+                }
+            }
             return message;
         };
 
@@ -1204,6 +1321,8 @@ $root.mds = (function() {
             if (!options)
                 options = {};
             var object = {};
+            if (options.arrays || options.defaults)
+                object.fastpathBatch = [];
             if (options.defaults)
                 object.lane = 0;
             if (message.lane != null && message.hasOwnProperty("lane"))
@@ -1217,6 +1336,11 @@ $root.mds = (function() {
                 object.output = message.output;
                 if (options.oneofs)
                     object.body = "output";
+            }
+            if (message.fastpathBatch && message.fastpathBatch.length) {
+                object.fastpathBatch = [];
+                for (var j = 0; j < message.fastpathBatch.length; ++j)
+                    object.fastpathBatch[j] = $root.mds.FastpathResponse.toObject(message.fastpathBatch[j], options);
             }
             return object;
         };
@@ -1233,6 +1357,1125 @@ $root.mds = (function() {
         };
 
         return Response;
+    })();
+
+    mds.FastpathRequest = (function() {
+
+        /**
+         * Properties of a FastpathRequest.
+         * @memberof mds
+         * @interface IFastpathRequest
+         * @property {mds.FastpathRequest.Op|null} [op] FastpathRequest op
+         * @property {number|Long|null} [txnId] FastpathRequest txnId
+         * @property {boolean|null} [isPrimary] FastpathRequest isPrimary
+         * @property {Array.<mds.IKeyValuePair>|null} [kvp] FastpathRequest kvp
+         * @property {mds.IFastpathListOptions|null} [listOptions] FastpathRequest listOptions
+         */
+
+        /**
+         * Constructs a new FastpathRequest.
+         * @memberof mds
+         * @classdesc Represents a FastpathRequest.
+         * @implements IFastpathRequest
+         * @constructor
+         * @param {mds.IFastpathRequest=} [properties] Properties to set
+         */
+        function FastpathRequest(properties) {
+            this.kvp = [];
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * FastpathRequest op.
+         * @member {mds.FastpathRequest.Op} op
+         * @memberof mds.FastpathRequest
+         * @instance
+         */
+        FastpathRequest.prototype.op = 0;
+
+        /**
+         * FastpathRequest txnId.
+         * @member {number|Long} txnId
+         * @memberof mds.FastpathRequest
+         * @instance
+         */
+        FastpathRequest.prototype.txnId = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+        /**
+         * FastpathRequest isPrimary.
+         * @member {boolean} isPrimary
+         * @memberof mds.FastpathRequest
+         * @instance
+         */
+        FastpathRequest.prototype.isPrimary = false;
+
+        /**
+         * FastpathRequest kvp.
+         * @member {Array.<mds.IKeyValuePair>} kvp
+         * @memberof mds.FastpathRequest
+         * @instance
+         */
+        FastpathRequest.prototype.kvp = $util.emptyArray;
+
+        /**
+         * FastpathRequest listOptions.
+         * @member {mds.IFastpathListOptions|null|undefined} listOptions
+         * @memberof mds.FastpathRequest
+         * @instance
+         */
+        FastpathRequest.prototype.listOptions = null;
+
+        /**
+         * Creates a new FastpathRequest instance using the specified properties.
+         * @function create
+         * @memberof mds.FastpathRequest
+         * @static
+         * @param {mds.IFastpathRequest=} [properties] Properties to set
+         * @returns {mds.FastpathRequest} FastpathRequest instance
+         */
+        FastpathRequest.create = function create(properties) {
+            return new FastpathRequest(properties);
+        };
+
+        /**
+         * Encodes the specified FastpathRequest message. Does not implicitly {@link mds.FastpathRequest.verify|verify} messages.
+         * @function encode
+         * @memberof mds.FastpathRequest
+         * @static
+         * @param {mds.IFastpathRequest} message FastpathRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        FastpathRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.op != null && Object.hasOwnProperty.call(message, "op"))
+                writer.uint32(/* id 1, wireType 0 =*/8).int32(message.op);
+            if (message.txnId != null && Object.hasOwnProperty.call(message, "txnId"))
+                writer.uint32(/* id 2, wireType 0 =*/16).uint64(message.txnId);
+            if (message.isPrimary != null && Object.hasOwnProperty.call(message, "isPrimary"))
+                writer.uint32(/* id 3, wireType 0 =*/24).bool(message.isPrimary);
+            if (message.kvp != null && message.kvp.length)
+                for (var i = 0; i < message.kvp.length; ++i)
+                    $root.mds.KeyValuePair.encode(message.kvp[i], writer.uint32(/* id 4, wireType 2 =*/34).fork()).ldelim();
+            if (message.listOptions != null && Object.hasOwnProperty.call(message, "listOptions"))
+                $root.mds.FastpathListOptions.encode(message.listOptions, writer.uint32(/* id 5, wireType 2 =*/42).fork()).ldelim();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified FastpathRequest message, length delimited. Does not implicitly {@link mds.FastpathRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof mds.FastpathRequest
+         * @static
+         * @param {mds.IFastpathRequest} message FastpathRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        FastpathRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a FastpathRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof mds.FastpathRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {mds.FastpathRequest} FastpathRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        FastpathRequest.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.mds.FastpathRequest();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    message.op = reader.int32();
+                    break;
+                case 2:
+                    message.txnId = reader.uint64();
+                    break;
+                case 3:
+                    message.isPrimary = reader.bool();
+                    break;
+                case 4:
+                    if (!(message.kvp && message.kvp.length))
+                        message.kvp = [];
+                    message.kvp.push($root.mds.KeyValuePair.decode(reader, reader.uint32()));
+                    break;
+                case 5:
+                    message.listOptions = $root.mds.FastpathListOptions.decode(reader, reader.uint32());
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a FastpathRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof mds.FastpathRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {mds.FastpathRequest} FastpathRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        FastpathRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a FastpathRequest message.
+         * @function verify
+         * @memberof mds.FastpathRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        FastpathRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.op != null && message.hasOwnProperty("op"))
+                switch (message.op) {
+                default:
+                    return "op: enum value expected";
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                    break;
+                }
+            if (message.txnId != null && message.hasOwnProperty("txnId"))
+                if (!$util.isInteger(message.txnId) && !(message.txnId && $util.isInteger(message.txnId.low) && $util.isInteger(message.txnId.high)))
+                    return "txnId: integer|Long expected";
+            if (message.isPrimary != null && message.hasOwnProperty("isPrimary"))
+                if (typeof message.isPrimary !== "boolean")
+                    return "isPrimary: boolean expected";
+            if (message.kvp != null && message.hasOwnProperty("kvp")) {
+                if (!Array.isArray(message.kvp))
+                    return "kvp: array expected";
+                for (var i = 0; i < message.kvp.length; ++i) {
+                    var error = $root.mds.KeyValuePair.verify(message.kvp[i]);
+                    if (error)
+                        return "kvp." + error;
+                }
+            }
+            if (message.listOptions != null && message.hasOwnProperty("listOptions")) {
+                var error = $root.mds.FastpathListOptions.verify(message.listOptions);
+                if (error)
+                    return "listOptions." + error;
+            }
+            return null;
+        };
+
+        /**
+         * Creates a FastpathRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof mds.FastpathRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {mds.FastpathRequest} FastpathRequest
+         */
+        FastpathRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.mds.FastpathRequest)
+                return object;
+            var message = new $root.mds.FastpathRequest();
+            switch (object.op) {
+            case "INVALID":
+            case 0:
+                message.op = 0;
+                break;
+            case "COMMIT_TXN":
+            case 1:
+                message.op = 1;
+                break;
+            case "ABORT_TXN":
+            case 2:
+                message.op = 2;
+                break;
+            case "OPEN_TXN":
+            case 3:
+                message.op = 3;
+                break;
+            case "GET":
+            case 4:
+                message.op = 4;
+                break;
+            case "SET":
+            case 5:
+                message.op = 5;
+                break;
+            case "DELETE":
+            case 6:
+                message.op = 6;
+                break;
+            case "LIST":
+            case 7:
+                message.op = 7;
+                break;
+            }
+            if (object.txnId != null)
+                if ($util.Long)
+                    (message.txnId = $util.Long.fromValue(object.txnId)).unsigned = true;
+                else if (typeof object.txnId === "string")
+                    message.txnId = parseInt(object.txnId, 10);
+                else if (typeof object.txnId === "number")
+                    message.txnId = object.txnId;
+                else if (typeof object.txnId === "object")
+                    message.txnId = new $util.LongBits(object.txnId.low >>> 0, object.txnId.high >>> 0).toNumber(true);
+            if (object.isPrimary != null)
+                message.isPrimary = Boolean(object.isPrimary);
+            if (object.kvp) {
+                if (!Array.isArray(object.kvp))
+                    throw TypeError(".mds.FastpathRequest.kvp: array expected");
+                message.kvp = [];
+                for (var i = 0; i < object.kvp.length; ++i) {
+                    if (typeof object.kvp[i] !== "object")
+                        throw TypeError(".mds.FastpathRequest.kvp: object expected");
+                    message.kvp[i] = $root.mds.KeyValuePair.fromObject(object.kvp[i]);
+                }
+            }
+            if (object.listOptions != null) {
+                if (typeof object.listOptions !== "object")
+                    throw TypeError(".mds.FastpathRequest.listOptions: object expected");
+                message.listOptions = $root.mds.FastpathListOptions.fromObject(object.listOptions);
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a FastpathRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof mds.FastpathRequest
+         * @static
+         * @param {mds.FastpathRequest} message FastpathRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        FastpathRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.arrays || options.defaults)
+                object.kvp = [];
+            if (options.defaults) {
+                object.op = options.enums === String ? "INVALID" : 0;
+                if ($util.Long) {
+                    var long = new $util.Long(0, 0, true);
+                    object.txnId = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                } else
+                    object.txnId = options.longs === String ? "0" : 0;
+                object.isPrimary = false;
+                object.listOptions = null;
+            }
+            if (message.op != null && message.hasOwnProperty("op"))
+                object.op = options.enums === String ? $root.mds.FastpathRequest.Op[message.op] : message.op;
+            if (message.txnId != null && message.hasOwnProperty("txnId"))
+                if (typeof message.txnId === "number")
+                    object.txnId = options.longs === String ? String(message.txnId) : message.txnId;
+                else
+                    object.txnId = options.longs === String ? $util.Long.prototype.toString.call(message.txnId) : options.longs === Number ? new $util.LongBits(message.txnId.low >>> 0, message.txnId.high >>> 0).toNumber(true) : message.txnId;
+            if (message.isPrimary != null && message.hasOwnProperty("isPrimary"))
+                object.isPrimary = message.isPrimary;
+            if (message.kvp && message.kvp.length) {
+                object.kvp = [];
+                for (var j = 0; j < message.kvp.length; ++j)
+                    object.kvp[j] = $root.mds.KeyValuePair.toObject(message.kvp[j], options);
+            }
+            if (message.listOptions != null && message.hasOwnProperty("listOptions"))
+                object.listOptions = $root.mds.FastpathListOptions.toObject(message.listOptions, options);
+            return object;
+        };
+
+        /**
+         * Converts this FastpathRequest to JSON.
+         * @function toJSON
+         * @memberof mds.FastpathRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        FastpathRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Op enum.
+         * @name mds.FastpathRequest.Op
+         * @enum {number}
+         * @property {number} INVALID=0 INVALID value
+         * @property {number} COMMIT_TXN=1 COMMIT_TXN value
+         * @property {number} ABORT_TXN=2 ABORT_TXN value
+         * @property {number} OPEN_TXN=3 OPEN_TXN value
+         * @property {number} GET=4 GET value
+         * @property {number} SET=5 SET value
+         * @property {number} DELETE=6 DELETE value
+         * @property {number} LIST=7 LIST value
+         */
+        FastpathRequest.Op = (function() {
+            var valuesById = {}, values = Object.create(valuesById);
+            values[valuesById[0] = "INVALID"] = 0;
+            values[valuesById[1] = "COMMIT_TXN"] = 1;
+            values[valuesById[2] = "ABORT_TXN"] = 2;
+            values[valuesById[3] = "OPEN_TXN"] = 3;
+            values[valuesById[4] = "GET"] = 4;
+            values[valuesById[5] = "SET"] = 5;
+            values[valuesById[6] = "DELETE"] = 6;
+            values[valuesById[7] = "LIST"] = 7;
+            return values;
+        })();
+
+        return FastpathRequest;
+    })();
+
+    mds.FastpathListOptions = (function() {
+
+        /**
+         * Properties of a FastpathListOptions.
+         * @memberof mds
+         * @interface IFastpathListOptions
+         * @property {number|null} [limit] FastpathListOptions limit
+         * @property {boolean|null} [reverse] FastpathListOptions reverse
+         * @property {boolean|null} [wantValue] FastpathListOptions wantValue
+         */
+
+        /**
+         * Constructs a new FastpathListOptions.
+         * @memberof mds
+         * @classdesc Represents a FastpathListOptions.
+         * @implements IFastpathListOptions
+         * @constructor
+         * @param {mds.IFastpathListOptions=} [properties] Properties to set
+         */
+        function FastpathListOptions(properties) {
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * FastpathListOptions limit.
+         * @member {number} limit
+         * @memberof mds.FastpathListOptions
+         * @instance
+         */
+        FastpathListOptions.prototype.limit = 0;
+
+        /**
+         * FastpathListOptions reverse.
+         * @member {boolean} reverse
+         * @memberof mds.FastpathListOptions
+         * @instance
+         */
+        FastpathListOptions.prototype.reverse = false;
+
+        /**
+         * FastpathListOptions wantValue.
+         * @member {boolean} wantValue
+         * @memberof mds.FastpathListOptions
+         * @instance
+         */
+        FastpathListOptions.prototype.wantValue = false;
+
+        /**
+         * Creates a new FastpathListOptions instance using the specified properties.
+         * @function create
+         * @memberof mds.FastpathListOptions
+         * @static
+         * @param {mds.IFastpathListOptions=} [properties] Properties to set
+         * @returns {mds.FastpathListOptions} FastpathListOptions instance
+         */
+        FastpathListOptions.create = function create(properties) {
+            return new FastpathListOptions(properties);
+        };
+
+        /**
+         * Encodes the specified FastpathListOptions message. Does not implicitly {@link mds.FastpathListOptions.verify|verify} messages.
+         * @function encode
+         * @memberof mds.FastpathListOptions
+         * @static
+         * @param {mds.IFastpathListOptions} message FastpathListOptions message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        FastpathListOptions.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.limit != null && Object.hasOwnProperty.call(message, "limit"))
+                writer.uint32(/* id 1, wireType 0 =*/8).uint32(message.limit);
+            if (message.reverse != null && Object.hasOwnProperty.call(message, "reverse"))
+                writer.uint32(/* id 2, wireType 0 =*/16).bool(message.reverse);
+            if (message.wantValue != null && Object.hasOwnProperty.call(message, "wantValue"))
+                writer.uint32(/* id 3, wireType 0 =*/24).bool(message.wantValue);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified FastpathListOptions message, length delimited. Does not implicitly {@link mds.FastpathListOptions.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof mds.FastpathListOptions
+         * @static
+         * @param {mds.IFastpathListOptions} message FastpathListOptions message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        FastpathListOptions.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a FastpathListOptions message from the specified reader or buffer.
+         * @function decode
+         * @memberof mds.FastpathListOptions
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {mds.FastpathListOptions} FastpathListOptions
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        FastpathListOptions.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.mds.FastpathListOptions();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    message.limit = reader.uint32();
+                    break;
+                case 2:
+                    message.reverse = reader.bool();
+                    break;
+                case 3:
+                    message.wantValue = reader.bool();
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a FastpathListOptions message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof mds.FastpathListOptions
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {mds.FastpathListOptions} FastpathListOptions
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        FastpathListOptions.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a FastpathListOptions message.
+         * @function verify
+         * @memberof mds.FastpathListOptions
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        FastpathListOptions.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.limit != null && message.hasOwnProperty("limit"))
+                if (!$util.isInteger(message.limit))
+                    return "limit: integer expected";
+            if (message.reverse != null && message.hasOwnProperty("reverse"))
+                if (typeof message.reverse !== "boolean")
+                    return "reverse: boolean expected";
+            if (message.wantValue != null && message.hasOwnProperty("wantValue"))
+                if (typeof message.wantValue !== "boolean")
+                    return "wantValue: boolean expected";
+            return null;
+        };
+
+        /**
+         * Creates a FastpathListOptions message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof mds.FastpathListOptions
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {mds.FastpathListOptions} FastpathListOptions
+         */
+        FastpathListOptions.fromObject = function fromObject(object) {
+            if (object instanceof $root.mds.FastpathListOptions)
+                return object;
+            var message = new $root.mds.FastpathListOptions();
+            if (object.limit != null)
+                message.limit = object.limit >>> 0;
+            if (object.reverse != null)
+                message.reverse = Boolean(object.reverse);
+            if (object.wantValue != null)
+                message.wantValue = Boolean(object.wantValue);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a FastpathListOptions message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof mds.FastpathListOptions
+         * @static
+         * @param {mds.FastpathListOptions} message FastpathListOptions
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        FastpathListOptions.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.defaults) {
+                object.limit = 0;
+                object.reverse = false;
+                object.wantValue = false;
+            }
+            if (message.limit != null && message.hasOwnProperty("limit"))
+                object.limit = message.limit;
+            if (message.reverse != null && message.hasOwnProperty("reverse"))
+                object.reverse = message.reverse;
+            if (message.wantValue != null && message.hasOwnProperty("wantValue"))
+                object.wantValue = message.wantValue;
+            return object;
+        };
+
+        /**
+         * Converts this FastpathListOptions to JSON.
+         * @function toJSON
+         * @memberof mds.FastpathListOptions
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        FastpathListOptions.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return FastpathListOptions;
+    })();
+
+    mds.FastpathResponse = (function() {
+
+        /**
+         * Properties of a FastpathResponse.
+         * @memberof mds
+         * @interface IFastpathResponse
+         * @property {number|Long|null} [txnId] FastpathResponse txnId
+         * @property {mds.IErrorResponse|null} [error] FastpathResponse error
+         * @property {Array.<mds.IKeyValuePair>|null} [kvp] FastpathResponse kvp
+         */
+
+        /**
+         * Constructs a new FastpathResponse.
+         * @memberof mds
+         * @classdesc Represents a FastpathResponse.
+         * @implements IFastpathResponse
+         * @constructor
+         * @param {mds.IFastpathResponse=} [properties] Properties to set
+         */
+        function FastpathResponse(properties) {
+            this.kvp = [];
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * FastpathResponse txnId.
+         * @member {number|Long} txnId
+         * @memberof mds.FastpathResponse
+         * @instance
+         */
+        FastpathResponse.prototype.txnId = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+        /**
+         * FastpathResponse error.
+         * @member {mds.IErrorResponse|null|undefined} error
+         * @memberof mds.FastpathResponse
+         * @instance
+         */
+        FastpathResponse.prototype.error = null;
+
+        /**
+         * FastpathResponse kvp.
+         * @member {Array.<mds.IKeyValuePair>} kvp
+         * @memberof mds.FastpathResponse
+         * @instance
+         */
+        FastpathResponse.prototype.kvp = $util.emptyArray;
+
+        /**
+         * Creates a new FastpathResponse instance using the specified properties.
+         * @function create
+         * @memberof mds.FastpathResponse
+         * @static
+         * @param {mds.IFastpathResponse=} [properties] Properties to set
+         * @returns {mds.FastpathResponse} FastpathResponse instance
+         */
+        FastpathResponse.create = function create(properties) {
+            return new FastpathResponse(properties);
+        };
+
+        /**
+         * Encodes the specified FastpathResponse message. Does not implicitly {@link mds.FastpathResponse.verify|verify} messages.
+         * @function encode
+         * @memberof mds.FastpathResponse
+         * @static
+         * @param {mds.IFastpathResponse} message FastpathResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        FastpathResponse.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.txnId != null && Object.hasOwnProperty.call(message, "txnId"))
+                writer.uint32(/* id 1, wireType 0 =*/8).uint64(message.txnId);
+            if (message.error != null && Object.hasOwnProperty.call(message, "error"))
+                $root.mds.ErrorResponse.encode(message.error, writer.uint32(/* id 2, wireType 2 =*/18).fork()).ldelim();
+            if (message.kvp != null && message.kvp.length)
+                for (var i = 0; i < message.kvp.length; ++i)
+                    $root.mds.KeyValuePair.encode(message.kvp[i], writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified FastpathResponse message, length delimited. Does not implicitly {@link mds.FastpathResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof mds.FastpathResponse
+         * @static
+         * @param {mds.IFastpathResponse} message FastpathResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        FastpathResponse.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a FastpathResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof mds.FastpathResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {mds.FastpathResponse} FastpathResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        FastpathResponse.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.mds.FastpathResponse();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    message.txnId = reader.uint64();
+                    break;
+                case 2:
+                    message.error = $root.mds.ErrorResponse.decode(reader, reader.uint32());
+                    break;
+                case 3:
+                    if (!(message.kvp && message.kvp.length))
+                        message.kvp = [];
+                    message.kvp.push($root.mds.KeyValuePair.decode(reader, reader.uint32()));
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a FastpathResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof mds.FastpathResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {mds.FastpathResponse} FastpathResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        FastpathResponse.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a FastpathResponse message.
+         * @function verify
+         * @memberof mds.FastpathResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        FastpathResponse.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.txnId != null && message.hasOwnProperty("txnId"))
+                if (!$util.isInteger(message.txnId) && !(message.txnId && $util.isInteger(message.txnId.low) && $util.isInteger(message.txnId.high)))
+                    return "txnId: integer|Long expected";
+            if (message.error != null && message.hasOwnProperty("error")) {
+                var error = $root.mds.ErrorResponse.verify(message.error);
+                if (error)
+                    return "error." + error;
+            }
+            if (message.kvp != null && message.hasOwnProperty("kvp")) {
+                if (!Array.isArray(message.kvp))
+                    return "kvp: array expected";
+                for (var i = 0; i < message.kvp.length; ++i) {
+                    var error = $root.mds.KeyValuePair.verify(message.kvp[i]);
+                    if (error)
+                        return "kvp." + error;
+                }
+            }
+            return null;
+        };
+
+        /**
+         * Creates a FastpathResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof mds.FastpathResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {mds.FastpathResponse} FastpathResponse
+         */
+        FastpathResponse.fromObject = function fromObject(object) {
+            if (object instanceof $root.mds.FastpathResponse)
+                return object;
+            var message = new $root.mds.FastpathResponse();
+            if (object.txnId != null)
+                if ($util.Long)
+                    (message.txnId = $util.Long.fromValue(object.txnId)).unsigned = true;
+                else if (typeof object.txnId === "string")
+                    message.txnId = parseInt(object.txnId, 10);
+                else if (typeof object.txnId === "number")
+                    message.txnId = object.txnId;
+                else if (typeof object.txnId === "object")
+                    message.txnId = new $util.LongBits(object.txnId.low >>> 0, object.txnId.high >>> 0).toNumber(true);
+            if (object.error != null) {
+                if (typeof object.error !== "object")
+                    throw TypeError(".mds.FastpathResponse.error: object expected");
+                message.error = $root.mds.ErrorResponse.fromObject(object.error);
+            }
+            if (object.kvp) {
+                if (!Array.isArray(object.kvp))
+                    throw TypeError(".mds.FastpathResponse.kvp: array expected");
+                message.kvp = [];
+                for (var i = 0; i < object.kvp.length; ++i) {
+                    if (typeof object.kvp[i] !== "object")
+                        throw TypeError(".mds.FastpathResponse.kvp: object expected");
+                    message.kvp[i] = $root.mds.KeyValuePair.fromObject(object.kvp[i]);
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a FastpathResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof mds.FastpathResponse
+         * @static
+         * @param {mds.FastpathResponse} message FastpathResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        FastpathResponse.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.arrays || options.defaults)
+                object.kvp = [];
+            if (options.defaults) {
+                if ($util.Long) {
+                    var long = new $util.Long(0, 0, true);
+                    object.txnId = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                } else
+                    object.txnId = options.longs === String ? "0" : 0;
+                object.error = null;
+            }
+            if (message.txnId != null && message.hasOwnProperty("txnId"))
+                if (typeof message.txnId === "number")
+                    object.txnId = options.longs === String ? String(message.txnId) : message.txnId;
+                else
+                    object.txnId = options.longs === String ? $util.Long.prototype.toString.call(message.txnId) : options.longs === Number ? new $util.LongBits(message.txnId.low >>> 0, message.txnId.high >>> 0).toNumber(true) : message.txnId;
+            if (message.error != null && message.hasOwnProperty("error"))
+                object.error = $root.mds.ErrorResponse.toObject(message.error, options);
+            if (message.kvp && message.kvp.length) {
+                object.kvp = [];
+                for (var j = 0; j < message.kvp.length; ++j)
+                    object.kvp[j] = $root.mds.KeyValuePair.toObject(message.kvp[j], options);
+            }
+            return object;
+        };
+
+        /**
+         * Converts this FastpathResponse to JSON.
+         * @function toJSON
+         * @memberof mds.FastpathResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        FastpathResponse.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return FastpathResponse;
+    })();
+
+    mds.KeyValuePair = (function() {
+
+        /**
+         * Properties of a KeyValuePair.
+         * @memberof mds
+         * @interface IKeyValuePair
+         * @property {Uint8Array|null} [key] KeyValuePair key
+         * @property {Uint8Array|null} [value] KeyValuePair value
+         */
+
+        /**
+         * Constructs a new KeyValuePair.
+         * @memberof mds
+         * @classdesc Represents a KeyValuePair.
+         * @implements IKeyValuePair
+         * @constructor
+         * @param {mds.IKeyValuePair=} [properties] Properties to set
+         */
+        function KeyValuePair(properties) {
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * KeyValuePair key.
+         * @member {Uint8Array} key
+         * @memberof mds.KeyValuePair
+         * @instance
+         */
+        KeyValuePair.prototype.key = $util.newBuffer([]);
+
+        /**
+         * KeyValuePair value.
+         * @member {Uint8Array} value
+         * @memberof mds.KeyValuePair
+         * @instance
+         */
+        KeyValuePair.prototype.value = $util.newBuffer([]);
+
+        /**
+         * Creates a new KeyValuePair instance using the specified properties.
+         * @function create
+         * @memberof mds.KeyValuePair
+         * @static
+         * @param {mds.IKeyValuePair=} [properties] Properties to set
+         * @returns {mds.KeyValuePair} KeyValuePair instance
+         */
+        KeyValuePair.create = function create(properties) {
+            return new KeyValuePair(properties);
+        };
+
+        /**
+         * Encodes the specified KeyValuePair message. Does not implicitly {@link mds.KeyValuePair.verify|verify} messages.
+         * @function encode
+         * @memberof mds.KeyValuePair
+         * @static
+         * @param {mds.IKeyValuePair} message KeyValuePair message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        KeyValuePair.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.key != null && Object.hasOwnProperty.call(message, "key"))
+                writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.key);
+            if (message.value != null && Object.hasOwnProperty.call(message, "value"))
+                writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.value);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified KeyValuePair message, length delimited. Does not implicitly {@link mds.KeyValuePair.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof mds.KeyValuePair
+         * @static
+         * @param {mds.IKeyValuePair} message KeyValuePair message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        KeyValuePair.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a KeyValuePair message from the specified reader or buffer.
+         * @function decode
+         * @memberof mds.KeyValuePair
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {mds.KeyValuePair} KeyValuePair
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        KeyValuePair.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.mds.KeyValuePair();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    message.key = reader.bytes();
+                    break;
+                case 2:
+                    message.value = reader.bytes();
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a KeyValuePair message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof mds.KeyValuePair
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {mds.KeyValuePair} KeyValuePair
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        KeyValuePair.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a KeyValuePair message.
+         * @function verify
+         * @memberof mds.KeyValuePair
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        KeyValuePair.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.key != null && message.hasOwnProperty("key"))
+                if (!(message.key && typeof message.key.length === "number" || $util.isString(message.key)))
+                    return "key: buffer expected";
+            if (message.value != null && message.hasOwnProperty("value"))
+                if (!(message.value && typeof message.value.length === "number" || $util.isString(message.value)))
+                    return "value: buffer expected";
+            return null;
+        };
+
+        /**
+         * Creates a KeyValuePair message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof mds.KeyValuePair
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {mds.KeyValuePair} KeyValuePair
+         */
+        KeyValuePair.fromObject = function fromObject(object) {
+            if (object instanceof $root.mds.KeyValuePair)
+                return object;
+            var message = new $root.mds.KeyValuePair();
+            if (object.key != null)
+                if (typeof object.key === "string")
+                    $util.base64.decode(object.key, message.key = $util.newBuffer($util.base64.length(object.key)), 0);
+                else if (object.key.length)
+                    message.key = object.key;
+            if (object.value != null)
+                if (typeof object.value === "string")
+                    $util.base64.decode(object.value, message.value = $util.newBuffer($util.base64.length(object.value)), 0);
+                else if (object.value.length)
+                    message.value = object.value;
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a KeyValuePair message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof mds.KeyValuePair
+         * @static
+         * @param {mds.KeyValuePair} message KeyValuePair
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        KeyValuePair.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.defaults) {
+                if (options.bytes === String)
+                    object.key = "";
+                else {
+                    object.key = [];
+                    if (options.bytes !== Array)
+                        object.key = $util.newBuffer(object.key);
+                }
+                if (options.bytes === String)
+                    object.value = "";
+                else {
+                    object.value = [];
+                    if (options.bytes !== Array)
+                        object.value = $util.newBuffer(object.value);
+                }
+            }
+            if (message.key != null && message.hasOwnProperty("key"))
+                object.key = options.bytes === String ? $util.base64.encode(message.key, 0, message.key.length) : options.bytes === Array ? Array.prototype.slice.call(message.key) : message.key;
+            if (message.value != null && message.hasOwnProperty("value"))
+                object.value = options.bytes === String ? $util.base64.encode(message.value, 0, message.value.length) : options.bytes === Array ? Array.prototype.slice.call(message.value) : message.value;
+            return object;
+        };
+
+        /**
+         * Converts this KeyValuePair to JSON.
+         * @function toJSON
+         * @memberof mds.KeyValuePair
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        KeyValuePair.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return KeyValuePair;
     })();
 
     mds.StoreInfo = (function() {
@@ -2101,24 +3344,24 @@ $root.mds = (function() {
         return ClusterRegion;
     })();
 
-    mds.RoleList = (function() {
+    mds.UserRoleList = (function() {
 
         /**
-         * Properties of a RoleList.
+         * Properties of a UserRoleList.
          * @memberof mds
-         * @interface IRoleList
-         * @property {Array.<string>|null} [roles] RoleList roles
+         * @interface IUserRoleList
+         * @property {Array.<string>|null} [roles] UserRoleList roles
          */
 
         /**
-         * Constructs a new RoleList.
+         * Constructs a new UserRoleList.
          * @memberof mds
-         * @classdesc Represents a RoleList.
-         * @implements IRoleList
+         * @classdesc Represents a UserRoleList.
+         * @implements IUserRoleList
          * @constructor
-         * @param {mds.IRoleList=} [properties] Properties to set
+         * @param {mds.IUserRoleList=} [properties] Properties to set
          */
-        function RoleList(properties) {
+        function UserRoleList(properties) {
             this.roles = [];
             if (properties)
                 for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
@@ -2127,35 +3370,35 @@ $root.mds = (function() {
         }
 
         /**
-         * RoleList roles.
+         * UserRoleList roles.
          * @member {Array.<string>} roles
-         * @memberof mds.RoleList
+         * @memberof mds.UserRoleList
          * @instance
          */
-        RoleList.prototype.roles = $util.emptyArray;
+        UserRoleList.prototype.roles = $util.emptyArray;
 
         /**
-         * Creates a new RoleList instance using the specified properties.
+         * Creates a new UserRoleList instance using the specified properties.
          * @function create
-         * @memberof mds.RoleList
+         * @memberof mds.UserRoleList
          * @static
-         * @param {mds.IRoleList=} [properties] Properties to set
-         * @returns {mds.RoleList} RoleList instance
+         * @param {mds.IUserRoleList=} [properties] Properties to set
+         * @returns {mds.UserRoleList} UserRoleList instance
          */
-        RoleList.create = function create(properties) {
-            return new RoleList(properties);
+        UserRoleList.create = function create(properties) {
+            return new UserRoleList(properties);
         };
 
         /**
-         * Encodes the specified RoleList message. Does not implicitly {@link mds.RoleList.verify|verify} messages.
+         * Encodes the specified UserRoleList message. Does not implicitly {@link mds.UserRoleList.verify|verify} messages.
          * @function encode
-         * @memberof mds.RoleList
+         * @memberof mds.UserRoleList
          * @static
-         * @param {mds.IRoleList} message RoleList message or plain object to encode
+         * @param {mds.IUserRoleList} message UserRoleList message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
-        RoleList.encode = function encode(message, writer) {
+        UserRoleList.encode = function encode(message, writer) {
             if (!writer)
                 writer = $Writer.create();
             if (message.roles != null && message.roles.length)
@@ -2165,33 +3408,33 @@ $root.mds = (function() {
         };
 
         /**
-         * Encodes the specified RoleList message, length delimited. Does not implicitly {@link mds.RoleList.verify|verify} messages.
+         * Encodes the specified UserRoleList message, length delimited. Does not implicitly {@link mds.UserRoleList.verify|verify} messages.
          * @function encodeDelimited
-         * @memberof mds.RoleList
+         * @memberof mds.UserRoleList
          * @static
-         * @param {mds.IRoleList} message RoleList message or plain object to encode
+         * @param {mds.IUserRoleList} message UserRoleList message or plain object to encode
          * @param {$protobuf.Writer} [writer] Writer to encode to
          * @returns {$protobuf.Writer} Writer
          */
-        RoleList.encodeDelimited = function encodeDelimited(message, writer) {
+        UserRoleList.encodeDelimited = function encodeDelimited(message, writer) {
             return this.encode(message, writer).ldelim();
         };
 
         /**
-         * Decodes a RoleList message from the specified reader or buffer.
+         * Decodes a UserRoleList message from the specified reader or buffer.
          * @function decode
-         * @memberof mds.RoleList
+         * @memberof mds.UserRoleList
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
          * @param {number} [length] Message length if known beforehand
-         * @returns {mds.RoleList} RoleList
+         * @returns {mds.UserRoleList} UserRoleList
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        RoleList.decode = function decode(reader, length) {
+        UserRoleList.decode = function decode(reader, length) {
             if (!(reader instanceof $Reader))
                 reader = $Reader.create(reader);
-            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.mds.RoleList();
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.mds.UserRoleList();
             while (reader.pos < end) {
                 var tag = reader.uint32();
                 switch (tag >>> 3) {
@@ -2209,30 +3452,30 @@ $root.mds = (function() {
         };
 
         /**
-         * Decodes a RoleList message from the specified reader or buffer, length delimited.
+         * Decodes a UserRoleList message from the specified reader or buffer, length delimited.
          * @function decodeDelimited
-         * @memberof mds.RoleList
+         * @memberof mds.UserRoleList
          * @static
          * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {mds.RoleList} RoleList
+         * @returns {mds.UserRoleList} UserRoleList
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        RoleList.decodeDelimited = function decodeDelimited(reader) {
+        UserRoleList.decodeDelimited = function decodeDelimited(reader) {
             if (!(reader instanceof $Reader))
                 reader = new $Reader(reader);
             return this.decode(reader, reader.uint32());
         };
 
         /**
-         * Verifies a RoleList message.
+         * Verifies a UserRoleList message.
          * @function verify
-         * @memberof mds.RoleList
+         * @memberof mds.UserRoleList
          * @static
          * @param {Object.<string,*>} message Plain object to verify
          * @returns {string|null} `null` if valid, otherwise the reason why it is not
          */
-        RoleList.verify = function verify(message) {
+        UserRoleList.verify = function verify(message) {
             if (typeof message !== "object" || message === null)
                 return "object expected";
             if (message.roles != null && message.hasOwnProperty("roles")) {
@@ -2246,20 +3489,20 @@ $root.mds = (function() {
         };
 
         /**
-         * Creates a RoleList message from a plain object. Also converts values to their respective internal types.
+         * Creates a UserRoleList message from a plain object. Also converts values to their respective internal types.
          * @function fromObject
-         * @memberof mds.RoleList
+         * @memberof mds.UserRoleList
          * @static
          * @param {Object.<string,*>} object Plain object
-         * @returns {mds.RoleList} RoleList
+         * @returns {mds.UserRoleList} UserRoleList
          */
-        RoleList.fromObject = function fromObject(object) {
-            if (object instanceof $root.mds.RoleList)
+        UserRoleList.fromObject = function fromObject(object) {
+            if (object instanceof $root.mds.UserRoleList)
                 return object;
-            var message = new $root.mds.RoleList();
+            var message = new $root.mds.UserRoleList();
             if (object.roles) {
                 if (!Array.isArray(object.roles))
-                    throw TypeError(".mds.RoleList.roles: array expected");
+                    throw TypeError(".mds.UserRoleList.roles: array expected");
                 message.roles = [];
                 for (var i = 0; i < object.roles.length; ++i)
                     message.roles[i] = String(object.roles[i]);
@@ -2268,15 +3511,15 @@ $root.mds = (function() {
         };
 
         /**
-         * Creates a plain object from a RoleList message. Also converts values to other types if specified.
+         * Creates a plain object from a UserRoleList message. Also converts values to other types if specified.
          * @function toObject
-         * @memberof mds.RoleList
+         * @memberof mds.UserRoleList
          * @static
-         * @param {mds.RoleList} message RoleList
+         * @param {mds.UserRoleList} message UserRoleList
          * @param {$protobuf.IConversionOptions} [options] Conversion options
          * @returns {Object.<string,*>} Plain object
          */
-        RoleList.toObject = function toObject(message, options) {
+        UserRoleList.toObject = function toObject(message, options) {
             if (!options)
                 options = {};
             var object = {};
@@ -2291,17 +3534,259 @@ $root.mds = (function() {
         };
 
         /**
-         * Converts this RoleList to JSON.
+         * Converts this UserRoleList to JSON.
          * @function toJSON
-         * @memberof mds.RoleList
+         * @memberof mds.UserRoleList
          * @instance
          * @returns {Object.<string,*>} JSON object
          */
-        RoleList.prototype.toJSON = function toJSON() {
+        UserRoleList.prototype.toJSON = function toJSON() {
             return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
         };
 
-        return RoleList;
+        return UserRoleList;
+    })();
+
+    mds.StoreRoleList = (function() {
+
+        /**
+         * Properties of a StoreRoleList.
+         * @memberof mds
+         * @interface IStoreRoleList
+         * @property {Array.<string>|null} [roles] StoreRoleList roles
+         * @property {Array.<string>|null} [readonlyRoles] StoreRoleList readonlyRoles
+         */
+
+        /**
+         * Constructs a new StoreRoleList.
+         * @memberof mds
+         * @classdesc Represents a StoreRoleList.
+         * @implements IStoreRoleList
+         * @constructor
+         * @param {mds.IStoreRoleList=} [properties] Properties to set
+         */
+        function StoreRoleList(properties) {
+            this.roles = [];
+            this.readonlyRoles = [];
+            if (properties)
+                for (var keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * StoreRoleList roles.
+         * @member {Array.<string>} roles
+         * @memberof mds.StoreRoleList
+         * @instance
+         */
+        StoreRoleList.prototype.roles = $util.emptyArray;
+
+        /**
+         * StoreRoleList readonlyRoles.
+         * @member {Array.<string>} readonlyRoles
+         * @memberof mds.StoreRoleList
+         * @instance
+         */
+        StoreRoleList.prototype.readonlyRoles = $util.emptyArray;
+
+        /**
+         * Creates a new StoreRoleList instance using the specified properties.
+         * @function create
+         * @memberof mds.StoreRoleList
+         * @static
+         * @param {mds.IStoreRoleList=} [properties] Properties to set
+         * @returns {mds.StoreRoleList} StoreRoleList instance
+         */
+        StoreRoleList.create = function create(properties) {
+            return new StoreRoleList(properties);
+        };
+
+        /**
+         * Encodes the specified StoreRoleList message. Does not implicitly {@link mds.StoreRoleList.verify|verify} messages.
+         * @function encode
+         * @memberof mds.StoreRoleList
+         * @static
+         * @param {mds.IStoreRoleList} message StoreRoleList message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        StoreRoleList.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.roles != null && message.roles.length)
+                for (var i = 0; i < message.roles.length; ++i)
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.roles[i]);
+            if (message.readonlyRoles != null && message.readonlyRoles.length)
+                for (var i = 0; i < message.readonlyRoles.length; ++i)
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.readonlyRoles[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified StoreRoleList message, length delimited. Does not implicitly {@link mds.StoreRoleList.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof mds.StoreRoleList
+         * @static
+         * @param {mds.IStoreRoleList} message StoreRoleList message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        StoreRoleList.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a StoreRoleList message from the specified reader or buffer.
+         * @function decode
+         * @memberof mds.StoreRoleList
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {mds.StoreRoleList} StoreRoleList
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        StoreRoleList.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            var end = length === undefined ? reader.len : reader.pos + length, message = new $root.mds.StoreRoleList();
+            while (reader.pos < end) {
+                var tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1:
+                    if (!(message.roles && message.roles.length))
+                        message.roles = [];
+                    message.roles.push(reader.string());
+                    break;
+                case 2:
+                    if (!(message.readonlyRoles && message.readonlyRoles.length))
+                        message.readonlyRoles = [];
+                    message.readonlyRoles.push(reader.string());
+                    break;
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a StoreRoleList message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof mds.StoreRoleList
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {mds.StoreRoleList} StoreRoleList
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        StoreRoleList.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a StoreRoleList message.
+         * @function verify
+         * @memberof mds.StoreRoleList
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        StoreRoleList.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.roles != null && message.hasOwnProperty("roles")) {
+                if (!Array.isArray(message.roles))
+                    return "roles: array expected";
+                for (var i = 0; i < message.roles.length; ++i)
+                    if (!$util.isString(message.roles[i]))
+                        return "roles: string[] expected";
+            }
+            if (message.readonlyRoles != null && message.hasOwnProperty("readonlyRoles")) {
+                if (!Array.isArray(message.readonlyRoles))
+                    return "readonlyRoles: array expected";
+                for (var i = 0; i < message.readonlyRoles.length; ++i)
+                    if (!$util.isString(message.readonlyRoles[i]))
+                        return "readonlyRoles: string[] expected";
+            }
+            return null;
+        };
+
+        /**
+         * Creates a StoreRoleList message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof mds.StoreRoleList
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {mds.StoreRoleList} StoreRoleList
+         */
+        StoreRoleList.fromObject = function fromObject(object) {
+            if (object instanceof $root.mds.StoreRoleList)
+                return object;
+            var message = new $root.mds.StoreRoleList();
+            if (object.roles) {
+                if (!Array.isArray(object.roles))
+                    throw TypeError(".mds.StoreRoleList.roles: array expected");
+                message.roles = [];
+                for (var i = 0; i < object.roles.length; ++i)
+                    message.roles[i] = String(object.roles[i]);
+            }
+            if (object.readonlyRoles) {
+                if (!Array.isArray(object.readonlyRoles))
+                    throw TypeError(".mds.StoreRoleList.readonlyRoles: array expected");
+                message.readonlyRoles = [];
+                for (var i = 0; i < object.readonlyRoles.length; ++i)
+                    message.readonlyRoles[i] = String(object.readonlyRoles[i]);
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a StoreRoleList message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof mds.StoreRoleList
+         * @static
+         * @param {mds.StoreRoleList} message StoreRoleList
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        StoreRoleList.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            var object = {};
+            if (options.arrays || options.defaults) {
+                object.roles = [];
+                object.readonlyRoles = [];
+            }
+            if (message.roles && message.roles.length) {
+                object.roles = [];
+                for (var j = 0; j < message.roles.length; ++j)
+                    object.roles[j] = message.roles[j];
+            }
+            if (message.readonlyRoles && message.readonlyRoles.length) {
+                object.readonlyRoles = [];
+                for (var j = 0; j < message.readonlyRoles.length; ++j)
+                    object.readonlyRoles[j] = message.readonlyRoles[j];
+            }
+            return object;
+        };
+
+        /**
+         * Converts this StoreRoleList to JSON.
+         * @function toJSON
+         * @memberof mds.StoreRoleList
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        StoreRoleList.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        return StoreRoleList;
     })();
 
     return mds;

@@ -217,6 +217,9 @@ export namespace mds {
 
         /** LoginResponse error */
         error?: (string|null);
+
+        /** LoginResponse pingIntervalMs */
+        pingIntervalMs?: (number|Long|null);
     }
 
     /** Represents a LoginResponse. */
@@ -236,6 +239,9 @@ export namespace mds {
 
         /** LoginResponse error. */
         public error: string;
+
+        /** LoginResponse pingIntervalMs. */
+        public pingIntervalMs: (number|Long);
 
         /**
          * Creates a new LoginResponse instance using the specified properties.
@@ -319,6 +325,9 @@ export namespace mds {
 
         /** Request data */
         data?: (string|null);
+
+        /** Request fastpathBatch */
+        fastpathBatch?: (mds.IFastpathRequest[]|null);
     }
 
     /** Represents a Request. */
@@ -338,6 +347,9 @@ export namespace mds {
 
         /** Request data. */
         public data: string;
+
+        /** Request fastpathBatch. */
+        public fastpathBatch: mds.IFastpathRequest[];
 
         /**
          * Creates a new Request instance using the specified properties.
@@ -421,6 +433,9 @@ export namespace mds {
 
         /** Response output */
         output?: (string|null);
+
+        /** Response fastpathBatch */
+        fastpathBatch?: (mds.IFastpathResponse[]|null);
     }
 
     /** Represents a Response. */
@@ -440,6 +455,9 @@ export namespace mds {
 
         /** Response output. */
         public output?: (string|null);
+
+        /** Response fastpathBatch. */
+        public fastpathBatch: mds.IFastpathResponse[];
 
         /** Response body. */
         public body?: ("error"|"output");
@@ -510,6 +528,435 @@ export namespace mds {
 
         /**
          * Converts this Response to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a FastpathRequest. */
+    interface IFastpathRequest {
+
+        /** FastpathRequest op */
+        op?: (mds.FastpathRequest.Op|null);
+
+        /** FastpathRequest txnId */
+        txnId?: (number|Long|null);
+
+        /** FastpathRequest isPrimary */
+        isPrimary?: (boolean|null);
+
+        /** FastpathRequest kvp */
+        kvp?: (mds.IKeyValuePair[]|null);
+
+        /** FastpathRequest listOptions */
+        listOptions?: (mds.IFastpathListOptions|null);
+    }
+
+    /** Represents a FastpathRequest. */
+    class FastpathRequest implements IFastpathRequest {
+
+        /**
+         * Constructs a new FastpathRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: mds.IFastpathRequest);
+
+        /** FastpathRequest op. */
+        public op: mds.FastpathRequest.Op;
+
+        /** FastpathRequest txnId. */
+        public txnId: (number|Long);
+
+        /** FastpathRequest isPrimary. */
+        public isPrimary: boolean;
+
+        /** FastpathRequest kvp. */
+        public kvp: mds.IKeyValuePair[];
+
+        /** FastpathRequest listOptions. */
+        public listOptions?: (mds.IFastpathListOptions|null);
+
+        /**
+         * Creates a new FastpathRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns FastpathRequest instance
+         */
+        public static create(properties?: mds.IFastpathRequest): mds.FastpathRequest;
+
+        /**
+         * Encodes the specified FastpathRequest message. Does not implicitly {@link mds.FastpathRequest.verify|verify} messages.
+         * @param message FastpathRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: mds.IFastpathRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified FastpathRequest message, length delimited. Does not implicitly {@link mds.FastpathRequest.verify|verify} messages.
+         * @param message FastpathRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: mds.IFastpathRequest, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a FastpathRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns FastpathRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): mds.FastpathRequest;
+
+        /**
+         * Decodes a FastpathRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns FastpathRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): mds.FastpathRequest;
+
+        /**
+         * Verifies a FastpathRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a FastpathRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns FastpathRequest
+         */
+        public static fromObject(object: { [k: string]: any }): mds.FastpathRequest;
+
+        /**
+         * Creates a plain object from a FastpathRequest message. Also converts values to other types if specified.
+         * @param message FastpathRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: mds.FastpathRequest, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this FastpathRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    namespace FastpathRequest {
+
+        /** Op enum. */
+        enum Op {
+            INVALID = 0,
+            COMMIT_TXN = 1,
+            ABORT_TXN = 2,
+            OPEN_TXN = 3,
+            GET = 4,
+            SET = 5,
+            DELETE = 6,
+            LIST = 7
+        }
+    }
+
+    /** Properties of a FastpathListOptions. */
+    interface IFastpathListOptions {
+
+        /** FastpathListOptions limit */
+        limit?: (number|null);
+
+        /** FastpathListOptions reverse */
+        reverse?: (boolean|null);
+
+        /** FastpathListOptions wantValue */
+        wantValue?: (boolean|null);
+    }
+
+    /** Represents a FastpathListOptions. */
+    class FastpathListOptions implements IFastpathListOptions {
+
+        /**
+         * Constructs a new FastpathListOptions.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: mds.IFastpathListOptions);
+
+        /** FastpathListOptions limit. */
+        public limit: number;
+
+        /** FastpathListOptions reverse. */
+        public reverse: boolean;
+
+        /** FastpathListOptions wantValue. */
+        public wantValue: boolean;
+
+        /**
+         * Creates a new FastpathListOptions instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns FastpathListOptions instance
+         */
+        public static create(properties?: mds.IFastpathListOptions): mds.FastpathListOptions;
+
+        /**
+         * Encodes the specified FastpathListOptions message. Does not implicitly {@link mds.FastpathListOptions.verify|verify} messages.
+         * @param message FastpathListOptions message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: mds.IFastpathListOptions, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified FastpathListOptions message, length delimited. Does not implicitly {@link mds.FastpathListOptions.verify|verify} messages.
+         * @param message FastpathListOptions message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: mds.IFastpathListOptions, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a FastpathListOptions message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns FastpathListOptions
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): mds.FastpathListOptions;
+
+        /**
+         * Decodes a FastpathListOptions message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns FastpathListOptions
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): mds.FastpathListOptions;
+
+        /**
+         * Verifies a FastpathListOptions message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a FastpathListOptions message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns FastpathListOptions
+         */
+        public static fromObject(object: { [k: string]: any }): mds.FastpathListOptions;
+
+        /**
+         * Creates a plain object from a FastpathListOptions message. Also converts values to other types if specified.
+         * @param message FastpathListOptions
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: mds.FastpathListOptions, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this FastpathListOptions to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a FastpathResponse. */
+    interface IFastpathResponse {
+
+        /** FastpathResponse txnId */
+        txnId?: (number|Long|null);
+
+        /** FastpathResponse error */
+        error?: (mds.IErrorResponse|null);
+
+        /** FastpathResponse kvp */
+        kvp?: (mds.IKeyValuePair[]|null);
+    }
+
+    /** Represents a FastpathResponse. */
+    class FastpathResponse implements IFastpathResponse {
+
+        /**
+         * Constructs a new FastpathResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: mds.IFastpathResponse);
+
+        /** FastpathResponse txnId. */
+        public txnId: (number|Long);
+
+        /** FastpathResponse error. */
+        public error?: (mds.IErrorResponse|null);
+
+        /** FastpathResponse kvp. */
+        public kvp: mds.IKeyValuePair[];
+
+        /**
+         * Creates a new FastpathResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns FastpathResponse instance
+         */
+        public static create(properties?: mds.IFastpathResponse): mds.FastpathResponse;
+
+        /**
+         * Encodes the specified FastpathResponse message. Does not implicitly {@link mds.FastpathResponse.verify|verify} messages.
+         * @param message FastpathResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: mds.IFastpathResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified FastpathResponse message, length delimited. Does not implicitly {@link mds.FastpathResponse.verify|verify} messages.
+         * @param message FastpathResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: mds.IFastpathResponse, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a FastpathResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns FastpathResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): mds.FastpathResponse;
+
+        /**
+         * Decodes a FastpathResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns FastpathResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): mds.FastpathResponse;
+
+        /**
+         * Verifies a FastpathResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a FastpathResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns FastpathResponse
+         */
+        public static fromObject(object: { [k: string]: any }): mds.FastpathResponse;
+
+        /**
+         * Creates a plain object from a FastpathResponse message. Also converts values to other types if specified.
+         * @param message FastpathResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: mds.FastpathResponse, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this FastpathResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a KeyValuePair. */
+    interface IKeyValuePair {
+
+        /** KeyValuePair key */
+        key?: (Uint8Array|null);
+
+        /** KeyValuePair value */
+        value?: (Uint8Array|null);
+    }
+
+    /** Represents a KeyValuePair. */
+    class KeyValuePair implements IKeyValuePair {
+
+        /**
+         * Constructs a new KeyValuePair.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: mds.IKeyValuePair);
+
+        /** KeyValuePair key. */
+        public key: Uint8Array;
+
+        /** KeyValuePair value. */
+        public value: Uint8Array;
+
+        /**
+         * Creates a new KeyValuePair instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns KeyValuePair instance
+         */
+        public static create(properties?: mds.IKeyValuePair): mds.KeyValuePair;
+
+        /**
+         * Encodes the specified KeyValuePair message. Does not implicitly {@link mds.KeyValuePair.verify|verify} messages.
+         * @param message KeyValuePair message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: mds.IKeyValuePair, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified KeyValuePair message, length delimited. Does not implicitly {@link mds.KeyValuePair.verify|verify} messages.
+         * @param message KeyValuePair message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: mds.IKeyValuePair, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a KeyValuePair message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns KeyValuePair
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): mds.KeyValuePair;
+
+        /**
+         * Decodes a KeyValuePair message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns KeyValuePair
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): mds.KeyValuePair;
+
+        /**
+         * Verifies a KeyValuePair message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a KeyValuePair message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns KeyValuePair
+         */
+        public static fromObject(object: { [k: string]: any }): mds.KeyValuePair;
+
+        /**
+         * Creates a plain object from a KeyValuePair message. Also converts values to other types if specified.
+         * @param message KeyValuePair
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: mds.KeyValuePair, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this KeyValuePair to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };
@@ -899,91 +1346,187 @@ export namespace mds {
         public toJSON(): { [k: string]: any };
     }
 
-    /** Properties of a RoleList. */
-    interface IRoleList {
+    /** Properties of a UserRoleList. */
+    interface IUserRoleList {
 
-        /** RoleList roles */
+        /** UserRoleList roles */
         roles?: (string[]|null);
     }
 
-    /** Represents a RoleList. */
-    class RoleList implements IRoleList {
+    /** Represents a UserRoleList. */
+    class UserRoleList implements IUserRoleList {
 
         /**
-         * Constructs a new RoleList.
+         * Constructs a new UserRoleList.
          * @param [properties] Properties to set
          */
-        constructor(properties?: mds.IRoleList);
+        constructor(properties?: mds.IUserRoleList);
 
-        /** RoleList roles. */
+        /** UserRoleList roles. */
         public roles: string[];
 
         /**
-         * Creates a new RoleList instance using the specified properties.
+         * Creates a new UserRoleList instance using the specified properties.
          * @param [properties] Properties to set
-         * @returns RoleList instance
+         * @returns UserRoleList instance
          */
-        public static create(properties?: mds.IRoleList): mds.RoleList;
+        public static create(properties?: mds.IUserRoleList): mds.UserRoleList;
 
         /**
-         * Encodes the specified RoleList message. Does not implicitly {@link mds.RoleList.verify|verify} messages.
-         * @param message RoleList message or plain object to encode
+         * Encodes the specified UserRoleList message. Does not implicitly {@link mds.UserRoleList.verify|verify} messages.
+         * @param message UserRoleList message or plain object to encode
          * @param [writer] Writer to encode to
          * @returns Writer
          */
-        public static encode(message: mds.IRoleList, writer?: $protobuf.Writer): $protobuf.Writer;
+        public static encode(message: mds.IUserRoleList, writer?: $protobuf.Writer): $protobuf.Writer;
 
         /**
-         * Encodes the specified RoleList message, length delimited. Does not implicitly {@link mds.RoleList.verify|verify} messages.
-         * @param message RoleList message or plain object to encode
+         * Encodes the specified UserRoleList message, length delimited. Does not implicitly {@link mds.UserRoleList.verify|verify} messages.
+         * @param message UserRoleList message or plain object to encode
          * @param [writer] Writer to encode to
          * @returns Writer
          */
-        public static encodeDelimited(message: mds.IRoleList, writer?: $protobuf.Writer): $protobuf.Writer;
+        public static encodeDelimited(message: mds.IUserRoleList, writer?: $protobuf.Writer): $protobuf.Writer;
 
         /**
-         * Decodes a RoleList message from the specified reader or buffer.
+         * Decodes a UserRoleList message from the specified reader or buffer.
          * @param reader Reader or buffer to decode from
          * @param [length] Message length if known beforehand
-         * @returns RoleList
+         * @returns UserRoleList
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): mds.RoleList;
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): mds.UserRoleList;
 
         /**
-         * Decodes a RoleList message from the specified reader or buffer, length delimited.
+         * Decodes a UserRoleList message from the specified reader or buffer, length delimited.
          * @param reader Reader or buffer to decode from
-         * @returns RoleList
+         * @returns UserRoleList
          * @throws {Error} If the payload is not a reader or valid buffer
          * @throws {$protobuf.util.ProtocolError} If required fields are missing
          */
-        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): mds.RoleList;
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): mds.UserRoleList;
 
         /**
-         * Verifies a RoleList message.
+         * Verifies a UserRoleList message.
          * @param message Plain object to verify
          * @returns `null` if valid, otherwise the reason why it is not
          */
         public static verify(message: { [k: string]: any }): (string|null);
 
         /**
-         * Creates a RoleList message from a plain object. Also converts values to their respective internal types.
+         * Creates a UserRoleList message from a plain object. Also converts values to their respective internal types.
          * @param object Plain object
-         * @returns RoleList
+         * @returns UserRoleList
          */
-        public static fromObject(object: { [k: string]: any }): mds.RoleList;
+        public static fromObject(object: { [k: string]: any }): mds.UserRoleList;
 
         /**
-         * Creates a plain object from a RoleList message. Also converts values to other types if specified.
-         * @param message RoleList
+         * Creates a plain object from a UserRoleList message. Also converts values to other types if specified.
+         * @param message UserRoleList
          * @param [options] Conversion options
          * @returns Plain object
          */
-        public static toObject(message: mds.RoleList, options?: $protobuf.IConversionOptions): { [k: string]: any };
+        public static toObject(message: mds.UserRoleList, options?: $protobuf.IConversionOptions): { [k: string]: any };
 
         /**
-         * Converts this RoleList to JSON.
+         * Converts this UserRoleList to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+    }
+
+    /** Properties of a StoreRoleList. */
+    interface IStoreRoleList {
+
+        /** StoreRoleList roles */
+        roles?: (string[]|null);
+
+        /** StoreRoleList readonlyRoles */
+        readonlyRoles?: (string[]|null);
+    }
+
+    /** Represents a StoreRoleList. */
+    class StoreRoleList implements IStoreRoleList {
+
+        /**
+         * Constructs a new StoreRoleList.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: mds.IStoreRoleList);
+
+        /** StoreRoleList roles. */
+        public roles: string[];
+
+        /** StoreRoleList readonlyRoles. */
+        public readonlyRoles: string[];
+
+        /**
+         * Creates a new StoreRoleList instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns StoreRoleList instance
+         */
+        public static create(properties?: mds.IStoreRoleList): mds.StoreRoleList;
+
+        /**
+         * Encodes the specified StoreRoleList message. Does not implicitly {@link mds.StoreRoleList.verify|verify} messages.
+         * @param message StoreRoleList message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(message: mds.IStoreRoleList, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Encodes the specified StoreRoleList message, length delimited. Does not implicitly {@link mds.StoreRoleList.verify|verify} messages.
+         * @param message StoreRoleList message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(message: mds.IStoreRoleList, writer?: $protobuf.Writer): $protobuf.Writer;
+
+        /**
+         * Decodes a StoreRoleList message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns StoreRoleList
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(reader: ($protobuf.Reader|Uint8Array), length?: number): mds.StoreRoleList;
+
+        /**
+         * Decodes a StoreRoleList message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns StoreRoleList
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(reader: ($protobuf.Reader|Uint8Array)): mds.StoreRoleList;
+
+        /**
+         * Verifies a StoreRoleList message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): (string|null);
+
+        /**
+         * Creates a StoreRoleList message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns StoreRoleList
+         */
+        public static fromObject(object: { [k: string]: any }): mds.StoreRoleList;
+
+        /**
+         * Creates a plain object from a StoreRoleList message. Also converts values to other types if specified.
+         * @param message StoreRoleList
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(message: mds.StoreRoleList, options?: $protobuf.IConversionOptions): { [k: string]: any };
+
+        /**
+         * Converts this StoreRoleList to JSON.
          * @returns JSON object
          */
         public toJSON(): { [k: string]: any };
