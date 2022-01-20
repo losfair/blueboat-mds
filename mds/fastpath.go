@@ -2,6 +2,7 @@ package mds
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 
@@ -15,20 +16,41 @@ import (
 var RetryableFastpathError = errors.New("retryable fastpath error")
 
 type Fastpath struct {
-	logger         *zap.Logger
-	cluster        *MdsCluster
-	ss             subspace.Subspace
-	perm           StorePermission
-	concurrencySem chan struct{}
-	txnSem         chan struct{}
-	inflightTxns   map[uint64]*managedTxn
-	inflightTxnId  uint64
-	inflightTxnMu  sync.RWMutex
+	logger          *zap.Logger
+	cluster         *MdsCluster
+	ss              subspace.Subspace
+	perm            StorePermission
+	concurrencySem  chan struct{}
+	txnSem          chan struct{}
+	inflightTxns    map[uint64]*managedTxn
+	inflightTxnId   uint64
+	inflightTxnMu   sync.RWMutex
+	txnPool_primary sync.Pool
+	txnPool_replica sync.Pool
 }
 
 type managedTxn struct {
-	txn      fdb.Transaction
-	readonly bool
+	txn fdb.Transaction
+
+	atomicReadonly uint32 // atomic to prevent data race with pooling
+
+	replica bool
+}
+
+func (txn *managedTxn) GetReadonly() bool {
+	return atomic.LoadUint32(&txn.atomicReadonly) == 1
+}
+
+func (txn *managedTxn) SetReadonly(x bool) {
+	if x {
+		atomic.StoreUint32(&txn.atomicReadonly, 1)
+	} else {
+		atomic.StoreUint32(&txn.atomicReadonly, 0)
+	}
+}
+
+type batchState struct {
+	txnZeroRedirect uint64
 }
 
 func NewFastpath(logger *zap.Logger, cluster *MdsCluster, ss subspace.Subspace, perm StorePermission) *Fastpath {
@@ -71,18 +93,20 @@ func (fp *Fastpath) Handle(req *protocol.Request, stop <-chan struct{}, xmit fun
 		if len(req.FastpathBatch) > FastpathBatchMaxSize {
 			panic(errors.Errorf("fastpath batch size %d exceeds max %d", len(req.FastpathBatch), FastpathBatchMaxSize))
 		}
-		rspVec := make([]*protocol.FastpathResponse, len(req.FastpathBatch))
-		for i, fpReq := range req.FastpathBatch {
-			rsp, err := fp.handleOnce(fpReq, stop)
+		bs := &batchState{}
+		rspVec := make([]*protocol.FastpathResponse, 0, len(req.FastpathBatch))
+		for _, fpReq := range req.FastpathBatch {
+			rsp, err := fp.handleOnce(bs, fpReq, stop)
 			if err != nil {
-				rspVec[i] = &protocol.FastpathResponse{
+				rspVec = append(rspVec, &protocol.FastpathResponse{
 					Error: &protocol.ErrorResponse{
 						Description: err.Error(),
 						Retryable:   errors.Is(err, RetryableFastpathError),
 					},
-				}
+				})
+				break
 			} else {
-				rspVec[i] = rsp
+				rspVec = append(rspVec, rsp)
 			}
 		}
 		err := xmit(&protocol.Response{
@@ -95,7 +119,20 @@ func (fp *Fastpath) Handle(req *protocol.Request, stop <-chan struct{}, xmit fun
 	}()
 }
 
-func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct{}) (*protocol.FastpathResponse, error) {
+func (fp *Fastpath) returnTxnToPool(txn *managedTxn) {
+	txn.txn.Reset()
+	if !txn.replica {
+		fp.txnPool_primary.Put(txn)
+	} else {
+		fp.txnPool_replica.Put(txn)
+	}
+}
+
+func (fp *Fastpath) handleOnce(batchState *batchState, req *protocol.FastpathRequest, stop <-chan struct{}) (*protocol.FastpathResponse, error) {
+	if req.TxnId == 0 {
+		req.TxnId = batchState.txnZeroRedirect
+	}
+
 	switch req.Op {
 	case protocol.FastpathRequest_COMMIT_TXN:
 		{
@@ -115,7 +152,7 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 				panic(errors.Errorf("invalid txn id %d", req.TxnId))
 			}
 
-			if txn.readonly {
+			if txn.GetReadonly() {
 				return nil, errors.New("COMMIT called on read-only transaction")
 			}
 
@@ -128,6 +165,7 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 				}
 				return nil, err
 			}
+			fp.returnTxnToPool(txn)
 			return &protocol.FastpathResponse{}, nil
 		}
 	case protocol.FastpathRequest_ABORT_TXN:
@@ -143,8 +181,7 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 			if !ok {
 				panic(errors.Errorf("invalid txn id %d", req.TxnId))
 			}
-
-			txn.txn.Cancel()
+			fp.returnTxnToPool(txn)
 			return &protocol.FastpathResponse{}, nil
 		}
 	case protocol.FastpathRequest_OPEN_TXN:
@@ -162,33 +199,48 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 				}
 			}()
 			if !req.IsPrimary && fp.cluster.replicaStore != nil {
-				newTxn, err := fp.cluster.replicaStore.CreateTransaction()
-				if err != nil {
-					return nil, err
-				}
-				if err := newTxn.Options().SetReadLockAware(); err != nil {
-					return nil, err
-				}
-				txn = &managedTxn{
-					txn:      newTxn,
-					readonly: !req.IsPrimary,
+				cachedTxn := fp.txnPool_replica.Get()
+				if cachedTxn != nil {
+					t := cachedTxn.(*managedTxn)
+					txn = t
+				} else {
+					newTxn, err := fp.cluster.replicaStore.CreateTransaction()
+					if err != nil {
+						return nil, err
+					}
+					if err := newTxn.Options().SetReadLockAware(); err != nil {
+						return nil, err
+					}
+					txn = &managedTxn{
+						txn:     newTxn,
+						replica: true,
+					}
 				}
 			} else {
-				newTxn, err := fp.cluster.primaryStore.CreateTransaction()
-				if err != nil {
-					return nil, err
-				}
-				txn = &managedTxn{
-					txn:      newTxn,
-					readonly: !req.IsPrimary,
+				cachedTxn := fp.txnPool_primary.Get()
+				if cachedTxn != nil {
+					t := cachedTxn.(*managedTxn)
+					txn = t
+				} else {
+					newTxn, err := fp.cluster.primaryStore.CreateTransaction()
+					if err != nil {
+						return nil, err
+					}
+					txn = &managedTxn{
+						txn:     newTxn,
+						replica: false,
+					}
 				}
 			}
+			txn.SetReadonly(!req.IsPrimary)
 
 			fp.inflightTxnMu.Lock()
 			fp.inflightTxnId += 1
 			txnId := fp.inflightTxnId
 			fp.inflightTxns[txnId] = txn
 			fp.inflightTxnMu.Unlock()
+
+			batchState.txnZeroRedirect = txnId
 
 			// Now we have successfully inserted the txn into the inflightTxns map, the commit/abort
 			// routines will deal with releasing the semaphore.
@@ -220,7 +272,7 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 				return nil, err
 			}
 			txn := fp.mustLoadTxn(req.TxnId)
-			if txn.readonly {
+			if txn.GetReadonly() {
 				return nil, errors.New("SET called on read-only transaction")
 			}
 			txn.txn.Set(fp.constructKey(req.Kvp[0].Key), req.Kvp[0].Value)
@@ -232,7 +284,7 @@ func (fp *Fastpath) handleOnce(req *protocol.FastpathRequest, stop <-chan struct
 				return nil, err
 			}
 			txn := fp.mustLoadTxn(req.TxnId)
-			if txn.readonly {
+			if txn.GetReadonly() {
 				return nil, errors.New("DELETE called on read-only transaction")
 			}
 			txn.txn.Clear(fp.constructKey(req.Kvp[0].Key))
