@@ -42,7 +42,7 @@ type WsConn struct {
 }
 
 func (ws *WsConn) NextReadDeadline() time.Time {
-	return time.Now().Add(ws.pingInterval + 3*time.Second)
+	return time.Now().Add(ws.pingInterval + 10*time.Second)
 }
 
 type ClientConfig struct {
@@ -265,6 +265,7 @@ func (c *Client) connectOnceThreadSafe() (*WsConn, error) {
 		return nil, err
 	}
 
+	// This handler runs on the `worker` goroutine.
 	rawConn.SetPingHandler(func(appData string) error {
 		conn.writeMu.Lock()
 		defer conn.writeMu.Unlock()
@@ -319,6 +320,10 @@ func (c *Client) worker() {
 					shutdownWs()
 					break
 				}
+
+				// Renew read deadline (even if no Ping messages are received)
+				c.atomicWs.conn.SetReadDeadline(c.atomicWs.NextReadDeadline())
+
 				backChannel_, ok := c.atomicWs.laneCompletion.Load(int(msg.Lane))
 				if !ok {
 					c.logger.Error("unknown lane", zap.Int("lane", int(msg.Lane)))
