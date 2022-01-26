@@ -208,13 +208,13 @@ func (fp *Fastpath) handleOnce(batchState *batchState, req *protocol.FastpathReq
 					if err != nil {
 						return nil, err
 					}
-					if err := newTxn.Options().SetReadLockAware(); err != nil {
-						return nil, err
-					}
 					txn = &managedTxn{
 						txn:     newTxn,
 						replica: true,
 					}
+				}
+				if err := txn.txn.Options().SetReadLockAware(); err != nil {
+					return nil, err
 				}
 			} else {
 				cachedTxn := fp.txnPool_primary.Get()
